@@ -5,6 +5,7 @@ A work in progress minimap addon based around the idea of using a point cloud to
 - `pointcloud_enabled` - Addon-wide toggle of functionality
 - `pointcloud_resolution` - How many units one point represents
 - `pointcloud_samplemode` - Which mode to use for sampling the world (1: Sweeping, 2: Noise, 3: Front-facing)
+- `pointcloud_samplerate` - The amount of traces shot out per frame
 
 - `pointcloud_minimap_enabled` - Whether to draw the minimap or not
 - `pointcloud_minimap_width` - How wide the minimap should be in pixels

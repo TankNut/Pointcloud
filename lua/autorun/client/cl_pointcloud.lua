@@ -19,6 +19,7 @@ pointcloud = {
 	Enabled = CreateClientConVar("pointcloud_enabled", "1", true, false),
 	Resolution = CreateClientConVar("pointcloud_resolution", "32", true, false, "The amount of source units contained per point", 32, 128), -- Units per point
 	SampleMode = CreateClientConVar("pointcloud_samplemode", "1", true, false, "What sampler to use for mapping out the area"),
+	SampleRate = CreateClientConVar("pointcloud_samplerate", "180", true, false, "How many samples are taken per frame"),
 
 	Minimap = {
 		Enabled = CreateClientConVar("pointcloud_minimap_enabled", "1", true, false),
@@ -44,6 +45,8 @@ pointcloud = {
 	Points = pointcloud and pointcloud.Points or {},
 	PointList = pointcloud and pointcloud.PointList or {},
 
+	SaveOffset = pointcloud and pointcloud.SaveOffset or 1,
+
 	Material = CreateMaterial("pointcloud", "unlitgeneric", {
 		["$basetexture"] = "color/white",
 		["$vertexcolor"] = 1,
@@ -53,6 +56,67 @@ pointcloud = {
 	})
 }
 
+file.CreateDir("pointcloud")
+
+function pointcloud:Save(resolution)
+	if not resolution then
+		resolution = self.Resolution:GetInt()
+	end
+
+	local filename = "pointcloud/" .. game.GetMap() .. "-" .. resolution .. ".txt"
+	local data = ""
+
+	timer.Remove("pointcloud")
+
+	for i = self.SaveOffset, #self.PointList do
+		local v = self.PointList[i]
+
+		local col = v[2]:ToColor()
+
+		data = data .. string.format("%d %d %d:%u %u %u|", v[1].x, v[1].y, v[1].z, col.r, col.g, col.b)
+
+		if #data > 10000 then
+			file.Append(filename, data)
+
+			data = ""
+		end
+	end
+
+	self.SaveOffset = #self.PointList
+
+	file.Append(filename, data)
+end
+
+function pointcloud:Load()
+	local resolution = self.Resolution:GetInt()
+	local filename = "pointcloud/" .. game.GetMap() .. "-" .. resolution .. ".txt"
+
+	self:Clear()
+
+	if not file.Exists(filename, "DATA") then
+		self.SaveOffset = 1
+
+		return
+	end
+
+	local data = file.Read(filename, "DATA")
+
+	for _, v in pairs(string.Explode("|", data)) do
+		local raw = string.Explode(":", v)
+
+		local vec = Vector(raw[1])
+		local col = Vector(raw[2])
+
+		col:Div(255)
+
+		self:AddLoadedPoint(vec, col)
+	end
+
+	print(string.format("[Pointcloud] Loaded %s points for %s at resolution: %sx", #self.PointList, game.GetMap(), resolution))
+
+	self.SaveOffset = #self.PointList
+end
+
 function pointcloud:Clear()
 	self.Points = {}
 	self.PointList = {}
@@ -60,27 +124,33 @@ function pointcloud:Clear()
 	-- 2D map
 	local minimap = self.Minimap
 
-	for _, v in pairs(minimap.RenderTargets) do
-		render.PushRenderTarget(v)
-			render.Clear(0, 0, 0, 0, true, true)
-		render.PopRenderTarget()
-	end
-
 	minimap.RenderTargets = {}
 	minimap.DrawIndex = 0
 
 	-- 3D map
 	local projection = self.Projection
 
-	render.PushRenderTarget(projection.RenderTarget)
-		render.Clear(0, 0, 0, 0, true, true)
-	render.PopRenderTarget()
-
 	projection.DrawIndex = 0
 	projection.Position = nil
 end
 
 local length = Vector(1, 1, 1):Length()
+
+function pointcloud:Trace(pos, ang)
+	local target = pos + (ang:Forward() * 20000)
+
+	local tr = util.TraceLine({
+		start = pos,
+		endpos = target,
+		mask = MASK_SOLID_BRUSHONLY
+	})
+
+	if tr.StartSolid or tr.Fraction == 1 then
+		return
+	end
+
+	self:AddPoint(tr.HitPos, render.GetSurfaceColor(tr.HitPos + tr.HitNormal * 1, tr.HitPos - tr.HitNormal * 1), tr.HitSky or tr.HitNoDraw)
+end
 
 function pointcloud:AddPoint(pos, col, sky)
 	local resolution = self.Resolution:GetInt()
@@ -101,27 +171,56 @@ function pointcloud:AddPoint(pos, col, sky)
 
 	self.Points[tostring(pos)] = true
 
+	local new = #self.PointList + 1
+
 	if not sky and col:Length() <= length then
 		local minimap = self.Minimap
 
-		if minimap.Enabled:GetBool() then
-			local rendertarget = minimap.RenderTargets[slice]
+		local rendertarget = minimap.RenderTargets[slice]
 
-			if not rendertarget then
-				rendertarget = GetRenderTarget("pointcloud" .. slice, 1024, 1024, true)
+		if not rendertarget then
+			rendertarget = GetRenderTarget("pointcloud" .. slice, 1024, 1024, true)
 
-				minimap.RenderTargets[slice] = rendertarget
+			minimap.RenderTargets[slice] = rendertarget
 
-				render.PushRenderTarget(rendertarget)
-					render.Clear(0, 0, 0, 0, true, true)
-				render.PopRenderTarget()
-			end
+			render.PushRenderTarget(rendertarget)
+				render.Clear(0, 0, 0, 0, true, true)
+			render.PopRenderTarget()
 		end
 
-		self.PointList[#self.PointList + 1] = {pos, col}
+		self.PointList[new] = {pos, col}
+	end
+
+	if #self.PointList - self.SaveOffset >= 1000 then
+		pointcloud:Save()
+	else
+		timer.Create("pointcloud", 10, 1, function()
+			pointcloud:Save()
+		end)
 	end
 
 	return true
+end
+
+function pointcloud:AddLoadedPoint(pos, col)
+	local slice = pos.z * (1 / self.Resolution:GetInt())
+
+	self.Points[tostring(pos)] = true
+
+	local minimap = self.Minimap
+	local rendertarget = minimap.RenderTargets[slice]
+
+	if not rendertarget then
+		rendertarget = GetRenderTarget("pointcloud" .. slice, 1024, 1024, true)
+
+		minimap.RenderTargets[slice] = rendertarget
+
+		render.PushRenderTarget(rendertarget)
+			render.Clear(0, 0, 0, 0, true, true)
+		render.PopRenderTarget()
+	end
+
+	self.PointList[#self.PointList + 1] = {pos, col}
 end
 
 function pointcloud:ToggleProjection()
@@ -150,8 +249,9 @@ function pointcloud:ToggleProjection()
 	projection.Stored = nil
 end
 
-local function clearall()
-	pointcloud:Clear()
+local function clearall(name, old, new)
+	pointcloud:Save(tonumber(old))
+	pointcloud:Load()
 end
 
 local function clearprojection()
@@ -186,6 +286,10 @@ else
 	end)
 end
 
+hook.Add("PostGamemodeLoaded", "pointcloud", function()
+	pointcloud:Load()
+end)
+
 hook.Add("Think", "pointcloud", function()
 	if not pointcloud.Enabled:GetBool() then
 		return
@@ -194,57 +298,25 @@ hook.Add("Think", "pointcloud", function()
 	local lp = LocalPlayer()
 	local lpos = lp:EyePos()
 	local mode = pointcloud.SampleMode:GetInt()
+	local rate = pointcloud.SampleRate:GetInt() + 1
 
 	if mode == POINTCLOUD_SAMPLE_SWEEP then
-		for i = -90, 90 do
-			local ang = Angle(i, FrameNumber() * 100.2, 0)
-			local target = lpos + (ang:Forward() * 20000)
+		for i = 1, rate do
+			local pitch = math.Rand(-90, 90)
+			local yaw = CurTime() * 360 + CurTime()
+			local ang = Angle(pitch, yaw, 0)
 
-			local tr = util.TraceLine({
-				start = lpos,
-				endpos = target,
-				mask = MASK_SOLID_BRUSHONLY
-			})
-
-			if tr.StartSolid or tr.Fraction == 1 then
-				continue
-			end
-
-			pointcloud:AddPoint(tr.HitPos, render.GetSurfaceColor(tr.HitPos + tr.HitNormal * 1, tr.HitPos - tr.HitNormal * 1), tr.HitSky or tr.HitNoDraw)
+			pointcloud:Trace(lpos, ang)
 		end
 	elseif mode == POINTCLOUD_SAMPLE_NOISE then
-		for i = 1, 180 do
-			local ang = AngleRand()
-			local target = lpos + (ang:Forward() * 20000)
-
-			local tr = util.TraceLine({
-				start = lpos,
-				endpos = target,
-				mask = MASK_SOLID_BRUSHONLY
-			})
-
-			if tr.StartSolid or tr.Fraction == 1 then
-				continue
-			end
-
-			pointcloud:AddPoint(tr.HitPos, render.GetSurfaceColor(tr.HitPos + tr.HitNormal * 1, tr.HitPos - tr.HitNormal * 1), tr.HitSky or tr.HitNoDraw)
+		for i = 1, rate do
+			pointcloud:Trace(lpos, AngleRand())
 		end
 	elseif mode == POINTCLOUD_SAMPLE_FRONTFACING then
-		for i = 1, 180 do
+		for i = 1, rate do
 			local ang = AngleRand(-45, 45)
-			local target = lpos + (lp:LocalToWorldAngles(ang):Forward() * 20000)
 
-			local tr = util.TraceLine({
-				start = lpos,
-				endpos = target,
-				mask = MASK_SOLID_BRUSHONLY
-			})
-
-			if tr.StartSolid or tr.Fraction == 1 then
-				continue
-			end
-
-			pointcloud:AddPoint(tr.HitPos, render.GetSurfaceColor(tr.HitPos + tr.HitNormal * 1, tr.HitPos - tr.HitNormal * 1), tr.HitSky or tr.HitNoDraw)
+			pointcloud:Trace(lpos, lp:LocalToWorldAngles(ang))
 		end
 	end
 end)
