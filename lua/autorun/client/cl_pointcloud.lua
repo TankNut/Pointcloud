@@ -63,58 +63,57 @@ function pointcloud:Save(resolution)
 		resolution = self.Resolution:GetInt()
 	end
 
-	local filename = "pointcloud/" .. game.GetMap() .. "-" .. resolution .. ".txt"
-	local data = ""
-
 	timer.Remove("pointcloud")
+
+	local filename = "pointcloud/" .. game.GetMap() .. "-" .. resolution .. ".dat"
+	local f = file.Open(filename, "ab", "DATA")
 
 	for i = self.SaveOffset, #self.PointList do
 		local v = self.PointList[i]
-
 		local col = v[2]:ToColor()
 
-		data = data .. string.format("%d %d %d:%u %u %u|", v[1].x, v[1].y, v[1].z, col.r, col.g, col.b)
+		f:WriteShort(v[1].x)
+		f:WriteShort(v[1].y)
+		f:WriteShort(v[1].z)
 
-		if #data > 10000 then
-			file.Append(filename, data)
-
-			data = ""
-		end
+		f:WriteByte(col.r)
+		f:WriteByte(col.g)
+		f:WriteByte(col.b)
 	end
 
-	self.SaveOffset = #self.PointList
+	f:Close()
 
-	file.Append(filename, data)
+	self.SaveOffset = #self.PointList
 end
 
 function pointcloud:Load()
 	local resolution = self.Resolution:GetInt()
-	local filename = "pointcloud/" .. game.GetMap() .. "-" .. resolution .. ".txt"
+	local filename = "pointcloud/" .. game.GetMap() .. "-" .. resolution .. ".dat"
 
 	self:Clear()
 
 	if not file.Exists(filename, "DATA") then
-		self.SaveOffset = 1
-
 		return
 	end
 
-	local data = file.Read(filename, "DATA")
+	local f = file.Open(filename, "rb", "DATA")
 
-	for _, v in pairs(string.Explode("|", data)) do
-		local raw = string.Explode(":", v)
+	while true do
+		if f:EndOfFile() then
+			break
+		end
 
-		local vec = Vector(raw[1])
-		local col = Vector(raw[2])
+		local vec = Vector(f:ReadShort(), f:ReadShort(), f:ReadShort())
+		local col = Vector(f:ReadByte(), f:ReadByte(), f:ReadByte())
 
 		col:Div(255)
 
 		self:AddLoadedPoint(vec, col)
 	end
 
-	print(string.format("[Pointcloud] Loaded %s points for %s at resolution: %sx", #self.PointList, game.GetMap(), resolution))
-
 	self.SaveOffset = #self.PointList
+
+	print(string.format("[Pointcloud] Loaded %s points for %s at resolution: %sx", #self.PointList, game.GetMap(), resolution))
 end
 
 function pointcloud:Clear()
