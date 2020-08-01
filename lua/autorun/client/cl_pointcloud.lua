@@ -1,11 +1,24 @@
 local sprite = Material("sprites/gmdm_pickups/light")
 
+local function shuffle(tab)
+	for i = #tab, 2, -1 do
+		local j = math.random(i)
+
+		tab[i], tab[j] = tab[j], tab[i]
+	end
+end
+
 POINTCLOUD_MODE_CUBE 	= 1
 POINTCLOUD_MODE_POINTS 	= 2
+
+POINTCLOUD_SAMPLE_SWEEP 		= 1
+POINTCLOUD_SAMPLE_NOISE 		= 2
+POINTCLOUD_SAMPLE_FRONTFACING 	= 3
 
 pointcloud = {
 	Enabled = CreateClientConVar("pointcloud_enabled", "1", true, false),
 	Resolution = CreateClientConVar("pointcloud_resolution", "32", true, false, "The amount of source units contained per point", 32, 128), -- Units per point
+	SampleMode = CreateClientConVar("pointcloud_samplemode", "1", true, false, "What sampler to use for mapping out the area"),
 
 	Minimap = {
 		Enabled = CreateClientConVar("pointcloud_minimap_enabled", "1", true, false),
@@ -18,12 +31,13 @@ pointcloud = {
 
 	Projection = {
 		Key = CreateClientConVar("pointcloud_projection_key", KEY_J, true, true),
-		Scale = CreateClientConVar("pointcloud_projection_scale", "0.01", true, false, "How big to render projections with respect to the actual world", 0.001, 0.1),
-		Height = CreateClientConVar("pointcloud_projection_height", "32", true, false, "Height offset of a projection compared to the player"),
-		Mode = CreateClientConVar("pointcloud_projection_mode", "1", true, false, "The rendering method used for projections", 1, 2),
+		Scale = CreateClientConVar("pointcloud_projection_scale", "0.01", true, false, "How big to render projections with respect to the actual world"),
+		Height = CreateClientConVar("pointcloud_projection_height", "32", true, false, "Height offset of a projection from the ground"),
+		Mode = CreateClientConVar("pointcloud_projection_mode", "1", true, false, "The rendering method used for projections"),
 		Position = pointcloud and pointcloud.Projection.Position or nil,
 		Stored = pointcloud and pointcloud.Projection.Stored or nil,
 		DrawIndex = pointcloud and pointcloud.Projection.DrawIndex or 0,
+		IndexList = pointcloud and pointcloud.Projection.IndexList or nil,
 		RenderTarget = GetRenderTarget("pointcloud", 1920, 1080, true)
 	},
 
@@ -63,6 +77,7 @@ function pointcloud:Clear()
 	render.PopRenderTarget()
 
 	projection.DrawIndex = 0
+	projection.Position = nil
 end
 
 local length = Vector(1, 1, 1):Length()
@@ -120,9 +135,16 @@ function pointcloud:ToggleProjection()
 		local lp = LocalPlayer()
 		local vec = lp:GetEyeTrace().HitPos
 
-		vec.z = lp:GetPos().z + projection.Height:GetInt()
+		vec.z = vec.z + projection.Height:GetInt()
 
 		projection.Position = vec
+		projection.IndexList = {}
+
+		for i = 1, #self.PointList do
+			projection.IndexList[i] = i
+		end
+
+		shuffle(projection.IndexList)
 	end
 
 	projection.Stored = nil
@@ -169,23 +191,61 @@ hook.Add("Think", "pointcloud", function()
 		return
 	end
 
-	local lpos = LocalPlayer():EyePos()
+	local lp = LocalPlayer()
+	local lpos = lp:EyePos()
+	local mode = pointcloud.SampleMode:GetInt()
 
-	for i = -90, 90 do
-		local ang = Angle(i, FrameNumber() * 100.2, 0)
-		local target = lpos + (ang:Forward() * 20000)
+	if mode == POINTCLOUD_SAMPLE_SWEEP then
+		for i = -90, 90 do
+			local ang = Angle(i, FrameNumber() * 100.2, 0)
+			local target = lpos + (ang:Forward() * 20000)
 
-		local tr = util.TraceLine({
-			start = lpos,
-			endpos = target,
-			mask = MASK_SOLID_BRUSHONLY
-		})
+			local tr = util.TraceLine({
+				start = lpos,
+				endpos = target,
+				mask = MASK_SOLID_BRUSHONLY
+			})
 
-		if tr.StartSolid or tr.Fraction == 1 then
-			continue
+			if tr.StartSolid or tr.Fraction == 1 then
+				continue
+			end
+
+			pointcloud:AddPoint(tr.HitPos, render.GetSurfaceColor(tr.HitPos + tr.HitNormal * 1, tr.HitPos - tr.HitNormal * 1), tr.HitSky or tr.HitNoDraw)
 		end
+	elseif mode == POINTCLOUD_SAMPLE_NOISE then
+		for i = 1, 180 do
+			local ang = AngleRand()
+			local target = lpos + (ang:Forward() * 20000)
 
-		pointcloud:AddPoint(tr.HitPos, render.GetSurfaceColor(tr.HitPos + tr.HitNormal * 1, tr.HitPos - tr.HitNormal * 1), tr.HitSky or tr.HitNoDraw)
+			local tr = util.TraceLine({
+				start = lpos,
+				endpos = target,
+				mask = MASK_SOLID_BRUSHONLY
+			})
+
+			if tr.StartSolid or tr.Fraction == 1 then
+				continue
+			end
+
+			pointcloud:AddPoint(tr.HitPos, render.GetSurfaceColor(tr.HitPos + tr.HitNormal * 1, tr.HitPos - tr.HitNormal * 1), tr.HitSky or tr.HitNoDraw)
+		end
+	elseif mode == POINTCLOUD_SAMPLE_FRONTFACING then
+		for i = 1, 180 do
+			local ang = AngleRand(-45, 45)
+			local target = lpos + (lp:LocalToWorldAngles(ang):Forward() * 20000)
+
+			local tr = util.TraceLine({
+				start = lpos,
+				endpos = target,
+				mask = MASK_SOLID_BRUSHONLY
+			})
+
+			if tr.StartSolid or tr.Fraction == 1 then
+				continue
+			end
+
+			pointcloud:AddPoint(tr.HitPos, render.GetSurfaceColor(tr.HitPos + tr.HitNormal * 1, tr.HitPos - tr.HitNormal * 1), tr.HitSky or tr.HitNoDraw)
+		end
 	end
 end)
 
@@ -326,14 +386,16 @@ function pointcloud:DrawProjection()
 
 		render.PushRenderTarget(projection.RenderTarget)
 			repeat
-				if projection.DrawIndex >= #self.PointList then
+				if projection.DrawIndex >= #projection.IndexList then
 					break
 				end
 
 				projection.DrawIndex = projection.DrawIndex + 1
 
-				local vec = self.PointList[projection.DrawIndex][1]
-				local col = self.PointList[projection.DrawIndex][2]:ToColor()
+				local index = projection.IndexList[projection.DrawIndex]
+
+				local vec = self.PointList[index][1]
+				local col = self.PointList[index][2]:ToColor()
 
 				if mode == POINTCLOUD_MODE_CUBE then
 					render.DrawBox(projection.Position + (vec * scale), angle_zero, mins, maxs, col)
