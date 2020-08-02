@@ -14,15 +14,24 @@ local minzoom = 0.5
 POINTCLOUD_MODE_CUBE 	= 1
 POINTCLOUD_MODE_POINTS 	= 2
 
-POINTCLOUD_SAMPLE_SWEEP 		= 1
-POINTCLOUD_SAMPLE_NOISE 		= 2
-POINTCLOUD_SAMPLE_FRONTFACING 	= 3
+POINTCLOUD_SAMPLE_NONE 			= 0
+POINTCLOUD_SAMPLE_NOISE 		= 1
+POINTCLOUD_SAMPLE_FRONTFACING 	= 2
 
 pointcloud = {
 	Enabled = CreateClientConVar("pointcloud_enabled", "1", true, false),
 	Resolution = CreateClientConVar("pointcloud_resolution", "64", true, false), -- Units per point
 	SampleMode = CreateClientConVar("pointcloud_samplemode", "1", true, false),
 	SampleRate = CreateClientConVar("pointcloud_samplerate", "90", true, false),
+
+	Debug = {
+		Enabled = CreateClientConVar("pointcloud_debug", "0", true, false),
+		Filesize = pointcloud and pointcloud.Debug.Filesize or 0,
+		MinimapTime = 0,
+		ProjectionTime = 0,
+		RenderTargets = 0,
+		SampleTime = 0
+	},
 
 	Minimap = {
 		Enabled = CreateClientConVar("pointcloud_minimap_enabled", "1", true, false),
@@ -32,15 +41,17 @@ pointcloud = {
 		ZoomOut = CreateClientConVar("pointcloud_minimap_zoomout", KEY_NONE, true, true),
 		ZoomIn = CreateClientConVar("pointcloud_minimap_zoomin", KEY_NONE, true, true),
 		ZoomStep = CreateClientConVar("pointcloud_minimap_zoomstep", 0.5, true, false),
+		LayerDepth = CreateClientConVar("pointcloud_minimap_layerdepth", -1, true, false),
 		DrawIndex = pointcloud and pointcloud.Minimap.DrawIndex or 0,
 		RenderTargets = pointcloud and pointcloud.Minimap.RenderTargets or {},
+		InfoLine = pointcloud and pointcloud.Minimap.InfoLine or {}
 	},
 
 	Projection = {
 		Key = CreateClientConVar("pointcloud_projection_key", KEY_J, true, true),
 		Scale = CreateClientConVar("pointcloud_projection_scale", "0.01", true, false, "How big to render projections with respect to the actual world"),
 		Height = CreateClientConVar("pointcloud_projection_height", "32", true, false, "Height offset of a projection from the ground"),
-		Mode = CreateClientConVar("pointcloud_projection_mode", "1", true, false, "The rendering method used for projections"),
+		Mode = CreateClientConVar("pointcloud_projection_mode", POINTCLOUD_SAMPLE_NOISE, true, false, "The rendering method used for projections"),
 		Position = pointcloud and pointcloud.Projection.Position or nil,
 		Stored = pointcloud and pointcloud.Projection.Stored or nil,
 		DrawIndex = pointcloud and pointcloud.Projection.DrawIndex or 0,
@@ -84,20 +95,22 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 				["3. Low (128 units/point)"] = {pointcloud_resolution = 128}
 			}
 		})
-		pnl:Help([[The sampler determines how the world around you is discovered and is arguably the most performance intensive part of this addon.
+		pnl:Help([[The sampler determines how the world around you is discovered and is easily the most performance intensive part of this addon.
 
-			Performance issues can be helped by lowering the sample rate, but doing so will slow the mapping process. The sample mode on the other hand is purely user preference and has no impact on performance whatsoever.]])
+			Performance issues can be helped by lowering the sample rate but doing so will slow the mapping process. The sample mode on the other hand is purely there for user preference and has no impact on performance whatsoever.]])
 		pnl:AddControl("ComboBox", {
 			Label = "Sample mode",
 			MenuButton = 0,
 			CVars = {"pointcloud_samplemode"},
 			Options = {
-				["1. Vertical sweep"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_SWEEP},
-				["2. Random noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_NOISE},
-				["3. Front-facing noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_FRONTFACING}
+				["0. Disabled"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_NONE},
+				["1. Random noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_NOISE},
+				["2. Front-facing noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_FRONTFACING}
 			}
 		})
 		pnl:NumSlider("Sample rate", "pointcloud_samplerate", 20, 180, 0)
+
+		pnl:CheckBox("Show debug info (Requires minimap)", "pointcloud_debug")
 	end)
 
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_minimap", "Minimap", "", "", function(pnl)
@@ -108,6 +121,10 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 		pnl:NumSlider("Width", "pointcloud_minimap_width", 1, ScrW(), 0)
 		pnl:NumSlider("Height", "pointcloud_minimap_height", 1, ScrH(), 0)
 		pnl:NumSlider("Zoom", "pointcloud_minimap_zoom", minzoom, maxzoom, 1)
+		pnl:Help([[Changing the layer depth will adjust how many layers the minimap can draw below you at any time, which may affect performance on maps with a lot of verticality.
+
+			Setting this to -1 will make it render every layer instead.]])
+		pnl:NumSlider("Layer depth", "pointcloud_minimap_layerdepth", -1, 100, 0)
 
 		pnl:Help("")
 		pnl:ControlHelp("Controls")
@@ -139,14 +156,18 @@ end)
 
 file.CreateDir("pointcloud")
 
-function pointcloud:Save(resolution)
+function pointcloud:GetFileName(resolution)
 	if not resolution then
 		resolution = self.Resolution:GetInt()
 	end
 
+	return "pointcloud/" .. game.GetMap() .. "-" .. resolution .. ".dat"
+end
+
+function pointcloud:Save(resolution)
 	timer.Remove("pointcloud")
 
-	local filename = "pointcloud/" .. game.GetMap() .. "-" .. resolution .. ".dat"
+	local filename = self:GetFileName(resolution)
 	local f = file.Open(filename, "ab", "DATA")
 
 	for i = self.SaveOffset, #self.PointList do
@@ -165,11 +186,12 @@ function pointcloud:Save(resolution)
 	f:Close()
 
 	self.SaveOffset = #self.PointList
+	self.Debug.Filesize = file.Size(filename, "DATA")
 end
 
 function pointcloud:Load()
 	local resolution = self.Resolution:GetInt()
-	local filename = "pointcloud/" .. game.GetMap() .. "-" .. resolution .. ".dat"
+	local filename = self:GetFileName(resolution)
 
 	self:Clear()
 
@@ -195,6 +217,7 @@ function pointcloud:Load()
 	f:Close()
 
 	self.SaveOffset = #self.PointList + 1
+	self.Debug.Filesize = file.Size(filename, "DATA")
 
 	print(string.format("[Pointcloud] Loaded %s points for %s at resolution: %sx", #self.PointList, game.GetMap(), resolution))
 end
@@ -233,10 +256,10 @@ function pointcloud:Trace(pos, ang)
 		return
 	end
 
-	self:AddPoint(tr.HitPos, render.GetSurfaceColor(tr.HitPos + tr.HitNormal * 1, tr.HitPos - tr.HitNormal * 1), tr.HitSky or tr.HitNoDraw)
+	self:AddPoint(tr.HitPos, tr.HitNormal, tr.HitSky or tr.HitNoDraw)
 end
 
-function pointcloud:AddPoint(pos, col, sky)
+function pointcloud:AddPoint(pos, normal, sky)
 	local resolution = self.Resolution:GetInt()
 
 	pos = pos * (1 / resolution)
@@ -252,6 +275,8 @@ function pointcloud:AddPoint(pos, col, sky)
 	if self.Points[tostring(pos)] then
 		return false
 	end
+
+	local col = render.GetSurfaceColor(pos + normal * 1, pos - normal * 1)
 
 	self.Points[tostring(pos)] = true
 
@@ -402,20 +427,14 @@ hook.Add("Think", "pointcloud", function()
 		return
 	end
 
+	local start = SysTime()
+
 	local lp = LocalPlayer()
 	local lpos = lp:EyePos()
 	local mode = pointcloud.SampleMode:GetInt()
 	local rate = pointcloud.SampleRate:GetInt() + 1
 
-	if mode == POINTCLOUD_SAMPLE_SWEEP then
-		for i = 1, rate do
-			local pitch = math.Rand(-90, 90)
-			local yaw = CurTime() * 360 + CurTime()
-			local ang = Angle(pitch, yaw, 0)
-
-			pointcloud:Trace(lpos, ang)
-		end
-	elseif mode == POINTCLOUD_SAMPLE_NOISE then
+	if mode == POINTCLOUD_SAMPLE_NOISE then
 		for i = 1, rate do
 			pointcloud:Trace(lpos, AngleRand())
 		end
@@ -426,9 +445,12 @@ hook.Add("Think", "pointcloud", function()
 			pointcloud:Trace(lpos, lp:LocalToWorldAngles(ang))
 		end
 	end
+
+	pointcloud.Debug.SampleTime = SysTime() - start
 end)
 
 function pointcloud:DrawMinimap()
+	local start = SysTime()
 	local minimap = self.Minimap
 
 	local lpos = LocalPlayer():EyePos()
@@ -495,14 +517,30 @@ function pointcloud:DrawMinimap()
 
 		render.SetStencilCompareFunction(STENCIL_EQUAL)
 
+		local endpoint = minimap.LayerDepth:GetInt()
+
+		if endpoint == -1 then
+			endpoint = nil
+		end
+
+		local counter = 0
+
 		for k, v in SortedPairs(minimap.RenderTargets) do
-			if k > baseslice then
+			if k > baseslice or (endpoint and k < baseslice - endpoint) then
 				continue
 			end
 
+			counter = counter + 1
+
 			self.Material:SetTexture("$basetexture", v)
 
-			surface.SetDrawColor(255, 255, 255)
+			local col = 255
+
+			if endpoint and endpoint > 0 then
+				col = math.Remap(k, baseslice, baseslice - endpoint, 255, 0)
+			end
+
+			surface.SetDrawColor(col, col, col, col)
 			surface.SetMaterial(self.Material)
 			surface.DrawTexturedRect((width * 0.5) - (size * 0.5) + pos.y - 2, (height * 0.5) - (size * 0.5) + pos.x - 2, size, size)
 		end
@@ -512,9 +550,58 @@ function pointcloud:DrawMinimap()
 		surface.SetDrawColor(255, 0, 0)
 		surface.DrawRect((width * 0.5) - 2, (height * 0.5) - 2, 4, 4)
 	cam.End2D()
+
+	self.Debug.RenderTargets = counter
+	self.Debug.MinimapTime = SysTime() - start
+end
+
+function pointcloud:AddInfoLine(str, ...)
+	if str then
+		draw.DrawText(string.format(str, ...), "BudgetLabel", 3, self.Minimap.InfoLine * 12, color_white, TEXT_ALIGN_LEFT)
+	end
+
+	self.Minimap.InfoLine = self.Minimap.InfoLine + 1
+end
+
+local function format_number(num)
+	local _, _, minus, int, fraction = string.find(tostring(num), "([-]?)(%d+)([.]?%d*)")
+
+	int = string.gsub(string.reverse(int), "(%d%d%d)", "%1,")
+
+	return minus .. string.gsub(string.reverse(int), "^,", "") .. fraction
+end
+
+function pointcloud:DrawInfo()
+	local minimap = self.Minimap
+
+	minimap.InfoLine = 0
+
+	cam.Start2D()
+		local perc = math.Round((minimap.DrawIndex / #self.PointList) * 100)
+
+		if perc < 100 then
+			self:AddInfoLine("Loading... %s%%", perc)
+		end
+
+		local debugmode = self.Debug
+
+		if debugmode.Enabled:GetBool() then
+			self:AddInfoLine("Map: %s", game.GetMap())
+			self:AddInfoLine("Resolution: %sx", self.Resolution:GetInt())
+			self:AddInfoLine()
+			self:AddInfoLine("Points: %s", format_number(#self.PointList))
+			self:AddInfoLine("File size: %s", string.NiceSize(self.Debug.Filesize))
+			self:AddInfoLine()
+			self:AddInfoLine("Sample time: %.2fms", debugmode.SampleTime * 1000)
+			self:AddInfoLine("Minimap render: %.2fms", debugmode.MinimapTime * 1000)
+			self:AddInfoLine("Minimap rendertargets: %u", debugmode.RenderTargets)
+			self:AddInfoLine("Projection render: %.2fms", self.Projection.Position and debugmode.ProjectionTime * 1000 or 0)
+		end
+	cam.End2D()
 end
 
 function pointcloud:DrawProjection()
+	local start = SysTime()
 	local projection = self.Projection
 
 	local resolution = self.Resolution:GetInt()
@@ -602,6 +689,7 @@ function pointcloud:DrawProjection()
 		if mode == POINTCLOUD_MODE_POINTS then
 			render.OverrideBlend(true, BLEND_SRC_COLOR, BLEND_ONE, BLENDFUNC_ADD, BLEND_SRC_ALPHA, BLEND_DST_ALPHA, BLENDFUNC_SUBTRACT)
 		end
+
 		surface.SetDrawColor(255, 255, 255)
 		surface.SetMaterial(self.Material)
 		surface.DrawTexturedRect(0, 0, ScrW(), ScrH())
@@ -616,6 +704,8 @@ function pointcloud:DrawProjection()
 		Ang = lang,
 		FOV = lfov
 	}
+
+	self.Debug.ProjectionTime = SysTime() - start
 end
 
 hook.Add("PreDrawViewModels", "pointcloud", function()
@@ -635,5 +725,6 @@ hook.Add("PreDrawHUD", "pointcloud", function()
 
 	if pointcloud.Minimap.Enabled:GetBool() then
 		pointcloud:DrawMinimap()
+		pointcloud:DrawInfo()
 	end
 end)
