@@ -111,6 +111,20 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 		pnl:NumSlider("Sample rate", "pointcloud_samplerate", 20, 180, 0)
 
 		pnl:CheckBox("Show debug info (Requires minimap)", "pointcloud_debug")
+
+		pnl:Help("If you for any reason want to delete all maps or a specific subset, you can find the directory containing the map files in garrysmod/data/pointcloud")
+		pnl:Button("Clear current map (current resolution)").DoClick = function()
+			file.Delete(pointcloud:GetFileName())
+
+			pointcloud:Clear()
+		end
+		pnl:Button("Clear current map (all resolutions)").DoClick = function()
+			for _, v in pairs(file.Find("pointcloud/" .. game.GetMap() .. "-*.dat", "DATA")) do
+				file.Delete("pointcloud/" .. v)
+			end
+
+			pointcloud:Clear()
+		end
 	end)
 
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_minimap", "Minimap", "", "", function(pnl)
@@ -259,10 +273,9 @@ function pointcloud:Trace(pos, ang)
 	self:AddPoint(tr.HitPos, tr.HitNormal, tr.HitSky or tr.HitNoDraw)
 end
 
-function pointcloud:AddPoint(pos, normal, sky)
+function pointcloud:AddPoint(vec, normal, sky)
 	local resolution = self.Resolution:GetInt()
-
-	pos = pos * (1 / resolution)
+	local pos = vec * (1 / resolution)
 
 	pos.x = math.Round(pos.x)
 	pos.y = math.Round(pos.y)
@@ -276,7 +289,28 @@ function pointcloud:AddPoint(pos, normal, sky)
 		return false
 	end
 
-	local col = render.GetSurfaceColor(pos + normal * 1, pos - normal * 1)
+	local col = render.GetSurfaceColor(vec + normal * 1, vec - normal * 1)
+	local contents = util.PointContents(vec)
+
+	if tobool(bit.band(contents, CONTENTS_WATER)) then
+		local h, s, v = ColorToHSV(col:ToColor())
+
+		h = 202
+		s = 0.5
+
+		col = HSVToColor(h, s, v)
+		col = Vector(col.r, col.g, col.b)
+		col:Div(255)
+	elseif tobool(bit.band(contents, CONTENTS_SLIME)) then
+		local h, s, v = ColorToHSV(col:ToColor())
+
+		h = 65
+		s = 0.6
+
+		col = HSVToColor(h, s, v)
+		col = Vector(col.r, col.g, col.b)
+		col:Div(255)
+	end
 
 	self.Points[tostring(pos)] = true
 
@@ -586,16 +620,22 @@ function pointcloud:DrawInfo()
 		local debugmode = self.Debug
 
 		if debugmode.Enabled:GetBool() then
+			local rendertargets = debugmode.RenderTargets
+
+			if self.Projection.Position then
+				rendertargets = rendertargets + 1
+			end
+
 			self:AddInfoLine("Map: %s", game.GetMap())
 			self:AddInfoLine("Resolution: %sx", self.Resolution:GetInt())
 			self:AddInfoLine()
 			self:AddInfoLine("Points: %s", format_number(#self.PointList))
 			self:AddInfoLine("File size: %s", string.NiceSize(self.Debug.Filesize))
 			self:AddInfoLine()
+			self:AddInfoLine("Active rendertargets: %u", rendertargets)
 			self:AddInfoLine("Sample time: %.2fms", debugmode.SampleTime * 1000)
-			self:AddInfoLine("Minimap render: %.2fms", debugmode.MinimapTime * 1000)
-			self:AddInfoLine("Minimap rendertargets: %u", debugmode.RenderTargets)
-			self:AddInfoLine("Projection render: %.2fms", self.Projection.Position and debugmode.ProjectionTime * 1000 or 0)
+			self:AddInfoLine("Minimap draw: %.2fms", debugmode.MinimapTime * 1000)
+			self:AddInfoLine("Projection draw: %.2fms", self.Projection.Position and debugmode.ProjectionTime * 1000 or 0)
 		end
 	cam.End2D()
 end
