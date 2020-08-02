@@ -8,6 +8,9 @@ local function shuffle(tab)
 	end
 end
 
+local maxzoom = 5
+local minzoom = 0.5
+
 POINTCLOUD_MODE_CUBE 	= 1
 POINTCLOUD_MODE_POINTS 	= 2
 
@@ -17,15 +20,18 @@ POINTCLOUD_SAMPLE_FRONTFACING 	= 3
 
 pointcloud = {
 	Enabled = CreateClientConVar("pointcloud_enabled", "1", true, false),
-	Resolution = CreateClientConVar("pointcloud_resolution", "32", true, false, "The amount of source units contained per point", 32, 128), -- Units per point
-	SampleMode = CreateClientConVar("pointcloud_samplemode", "1", true, false, "What sampler to use for mapping out the area"),
-	SampleRate = CreateClientConVar("pointcloud_samplerate", "180", true, false, "How many samples are taken per frame"),
+	Resolution = CreateClientConVar("pointcloud_resolution", "64", true, false), -- Units per point
+	SampleMode = CreateClientConVar("pointcloud_samplemode", "1", true, false),
+	SampleRate = CreateClientConVar("pointcloud_samplerate", "90", true, false),
 
 	Minimap = {
 		Enabled = CreateClientConVar("pointcloud_minimap_enabled", "1", true, false),
-		Width = CreateClientConVar("pointcloud_minimap_width", "300", true, false, "How wide the minimap display should be", 0),
-		Height = CreateClientConVar("pointcloud_minimap_height", "300", true, false, "How tall the minimap display should be", 0),
-		Zoom = CreateClientConVar("pointcloud_minimap_zoom", "1", true, false, "How far to zoom in on the minimap"),
+		Width = CreateClientConVar("pointcloud_minimap_width", "300", true, false),
+		Height = CreateClientConVar("pointcloud_minimap_height", "300", true, false),
+		Zoom = CreateClientConVar("pointcloud_minimap_zoom", "1", true, false),
+		ZoomOut = CreateClientConVar("pointcloud_minimap_zoomout", KEY_NONE, true, true),
+		ZoomIn = CreateClientConVar("pointcloud_minimap_zoomin", KEY_NONE, true, true),
+		ZoomStep = CreateClientConVar("pointcloud_minimap_zoomstep", 0.5, true, false),
 		DrawIndex = pointcloud and pointcloud.Minimap.DrawIndex or 0,
 		RenderTargets = pointcloud and pointcloud.Minimap.RenderTargets or {},
 	},
@@ -55,6 +61,81 @@ pointcloud = {
 		["$ignorez"] = 1
 	})
 }
+
+hook.Add("AddToolMenuCategories", "pointcloud", function()
+	spawnmenu.AddToolCategory("Options", "Pointcloud", "Pointcloud")
+end)
+
+hook.Add("PopulateToolMenu", "pointcloud", function()
+	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_general", "General settings", "", "", function(pnl)
+		pnl:ClearControls()
+
+		pnl:CheckBox("Enable", "pointcloud_enabled")
+		pnl:Help([[Changing the resolution might help alleviate performance issues caused by the size of the map and the amount of data being stored but will decrease clarity and accuracy.
+
+			This option can cause your game to momentarily freeze as things are saved and loaded. Don't worry, this is normal.]])
+		pnl:AddControl("ComboBox", {
+			Label = "Resolution",
+			MenuButton = 0,
+			CVars = {"pointcloud_resolution"},
+			Options = {
+				["1. High (32 units/point)"] = {pointcloud_resolution = 32},
+				["2. Medium (64 units/point)"] = {pointcloud_resolution = 64},
+				["3. Low (128 units/point)"] = {pointcloud_resolution = 128}
+			}
+		})
+		pnl:Help([[The sampler determines how the world around you is discovered and is arguably the most performance intensive part of this addon.
+
+			Performance issues can be helped by lowering the sample rate, but doing so will slow the mapping process. The sample mode on the other hand is purely user preference and has no impact on performance whatsoever.]])
+		pnl:AddControl("ComboBox", {
+			Label = "Sample mode",
+			MenuButton = 0,
+			CVars = {"pointcloud_samplemode"},
+			Options = {
+				["1. Vertical sweep"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_SWEEP},
+				["2. Random noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_NOISE},
+				["3. Front-facing noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_FRONTFACING}
+			}
+		})
+		pnl:NumSlider("Sample rate", "pointcloud_samplerate", 20, 180, 0)
+	end)
+
+	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_minimap", "Minimap", "", "", function(pnl)
+		pnl:ClearControls()
+
+		pnl:CheckBox("Enable minimap", "pointcloud_minimap_enabled")
+
+		pnl:NumSlider("Width", "pointcloud_minimap_width", 1, ScrW(), 0)
+		pnl:NumSlider("Height", "pointcloud_minimap_height", 1, ScrH(), 0)
+		pnl:NumSlider("Zoom", "pointcloud_minimap_zoom", minzoom, maxzoom, 1)
+
+		pnl:Help("")
+		pnl:ControlHelp("Controls")
+		pnl:AddControl("Numpad", {Label = "Zoom out", Command = "pointcloud_minimap_zoomout", Label2 = "Zoom in", Command2 = "pointcloud_minimap_zoomin"})
+		pnl:NumSlider("Step size", "pointcloud_minimap_zoomstep", 0.1, 1, 1)
+	end)
+
+	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_projection", "Projection", "", "", function(pnl)
+		pnl:ClearControls()
+
+		pnl:NumSlider("Scale", "pointcloud_projection_scale", 0.01, 0.1, 2)
+		pnl:NumSlider("Height offset", "pointcloud_projection_height", 0, 128, 0)
+
+		pnl:AddControl("ComboBox", {
+			Label = "Render mode",
+			MenuButton = 0,
+			CVars = {"pointcloud_projection_mode"},
+			Options = {
+				["1. Cubes"] = {pointcloud_projection_mode = POINTCLOUD_MODE_CUBE},
+				["2. Points"] = {pointcloud_projection_mode = POINTCLOUD_MODE_POINTS}
+			}
+		})
+
+		pnl:Help("")
+		pnl:ControlHelp("Controls")
+		pnl:AddControl("Numpad", {Label = "Toggle projection", Command = "pointcloud_projection_key", ButtonSize = 22})
+	end)
+end)
 
 file.CreateDir("pointcloud")
 
@@ -111,7 +192,9 @@ function pointcloud:Load()
 		self:AddLoadedPoint(vec, col)
 	end
 
-	self.SaveOffset = #self.PointList
+	f:Close()
+
+	self.SaveOffset = #self.PointList + 1
 
 	print(string.format("[Pointcloud] Loaded %s points for %s at resolution: %sx", #self.PointList, game.GetMap(), resolution))
 end
@@ -119,6 +202,8 @@ end
 function pointcloud:Clear()
 	self.Points = {}
 	self.PointList = {}
+
+	self.SaveOffset = 1
 
 	-- 2D map
 	local minimap = self.Minimap
@@ -248,6 +333,20 @@ function pointcloud:ToggleProjection()
 	projection.Stored = nil
 end
 
+function pointcloud:MinimapZoom(dir)
+	local minimap = self.Minimap
+	local zoom = minimap.Zoom:GetFloat()
+	local step = minimap.ZoomStep:GetFloat()
+
+	if dir then
+		zoom = math.min(zoom + step, maxzoom)
+	else
+		zoom = math.max(zoom - step, minzoom)
+	end
+
+	minimap.Zoom:SetFloat(zoom)
+end
+
 local function clearall(name, old, new)
 	pointcloud:Save(tonumber(old))
 	pointcloud:Load()
@@ -268,8 +367,12 @@ cvars.AddChangeCallback("pointcloud_projection_mode", clearprojection, "pointclo
 cvars.AddChangeCallback("pointcloud_projection_scale", clearprojection, "pointcloud")
 
 if game.SinglePlayer() then
-	net.Receive("nPointcloudKey", function()
+	net.Receive("nPointcloudProjection", function()
 		pointcloud:ToggleProjection()
+	end)
+
+	net.Receive("nPointcloudZoom", function()
+		pointcloud:MinimapZoom(net.ReadBool())
 	end)
 else
 	hook.Add("PlayerButtonDown", "pointcloud", function(ply, key)
@@ -278,9 +381,14 @@ else
 		end
 
 		local projection = pointcloud.Projection
+		local minimap = pointcloud.Minimap
 
 		if key == projection.Key:GetInt() then
 			pointcloud:ToggleProjection()
+		elseif key == minimap.ZoomOut:GetInt() then
+			pointcloud:MinimapZoom(false)
+		elseif key == minimap.ZoomIn:GetInt() then
+			pointcloud:MinimapZoom(true)
 		end
 	end)
 end
