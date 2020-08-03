@@ -1,0 +1,13 @@
+{
+	"title": "Pointcloud",
+	"type":	"tool",
+	"tags":	["fun", "scenic"],
+	"ignore":
+	[
+		"*.bat",
+		"*.jpg",
+		"*.md",
+		".git*",
+		"LICENSE"
+	]
+}

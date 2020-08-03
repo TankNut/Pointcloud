@@ -1,5 +1,4 @@
 # Pointcloud
-A work in progress minimap addon based around the idea of using a point cloud to store map info
+An addon for Garry's Mod that provides an in-game minimap through a dynamically generated pointcloud
 
-## Options
-All of the options have been moved to the in-game options section of the spawnmenu under `Pointcloud`
+Workshop link: http://steamcommunity.com/sharedfiles/filedetails/?id=2185917826
