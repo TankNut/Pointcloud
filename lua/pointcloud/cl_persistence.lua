@@ -4,6 +4,8 @@ pointcloud.Persistence.Budget = CreateClientConVar("pointcloud_loadbudget", "40"
 
 pointcloud.Persistence.Offset = 1
 
+file.CreateDir("pointcloud")
+
 function pointcloud.Persistence:IsLoading()
 	return tobool(self.FileHandle)
 end

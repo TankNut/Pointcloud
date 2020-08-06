@@ -6,6 +6,10 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 06 Aug 2020)", "", "", function(pnl)
 		pnl:ClearControls()
 
+		pnl:Help([[06 Aug 2020 (Hotfix #2):
+
+			- Fixed the pointcloud folder not being created]])
+
 		pnl:Help([[06 Aug 2020 (Hotfix):
 
 			- Fixed the clear current map button not working
