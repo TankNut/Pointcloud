@@ -6,6 +6,11 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 06 Aug 2020)", "", "", function(pnl)
 		pnl:ClearControls()
 
+		pnl:Help([[06 Aug 2020 (Hotfix):
+
+			- Fixed the clear current map button not working
+			- Added a button to manually toggle projections from the options menu]])
+
 		pnl:Help([[06 Aug 2020:
 
 			- Reorganized almost everything interally
@@ -57,7 +62,7 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 
 		pnl:Help("If you for any reason want to delete all maps or a specific subset, you can find the directory containing the map files in garrysmod/data/pointcloud")
 		pnl:Button("Clear current map (current resolution)").DoClick = function()
-			file.Delete(pointcloud:GetFileName())
+			file.Delete(pointcloud.Persistence:GetFileName())
 
 			pointcloud:Clear()
 		end
@@ -104,6 +109,11 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 				["2. Points"] = {pointcloud_projection_mode = POINTCLOUD_MODE_POINTS}
 			}
 		})
+
+		pnl:Help("There's currently an issue where other addons break the control method used in singleplayer, use this button to toggle projections if that's the case for you")
+		pnl:Button("Manual toggle").DoClick = function()
+			pointcloud.Projection:Toggle()
+		end
 
 		pnl:Help("")
 		pnl:ControlHelp("Controls")
