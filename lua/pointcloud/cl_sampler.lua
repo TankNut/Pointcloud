@@ -104,7 +104,7 @@ function pointcloud.Sampler:AddPoint(vec, normal)
 
 	pointcloud.PointList[#pointcloud.PointList + 1] = {pos, col}
 
-	if #pointcloud.PointList - pointcloud.SaveOffset >= 1000 then
+	if #pointcloud.PointList - pointcloud.Persistence.Offset >= 1000 then
 		pointcloud.Persistence:Save()
 	else
 		timer.Create("pointcloud", 10, 1, function()
