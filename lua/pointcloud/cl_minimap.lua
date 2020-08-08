@@ -120,8 +120,8 @@ function pointcloud.Minimap:Draw()
 
 		local counter = 0
 
-		local x = (width * 0.5) - (size * 0.5) + pos.y - 1
-		local y = (height * 0.5) - (size * 0.5) + pos.x - 1
+		local x = (width * 0.5) - (size * 0.5) + pos.y - 2
+		local y = (height * 0.5) - (size * 0.5) + pos.x - 2
 
 		for k, v in SortedPairs(self.RenderTargets) do
 			if k > baseslice or (endpoint and k < baseslice - endpoint) then
