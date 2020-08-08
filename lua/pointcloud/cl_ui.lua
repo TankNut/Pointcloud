@@ -6,6 +6,11 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 06 Aug 2020)", "", "", function(pnl)
 		pnl:ClearControls()
 
+		pnl:Help([[08 Aug 2020:
+
+			- Fixed some error spam (Surprised nobody reported this)
+			- Improved the way the addon behaves when enabling/disabling, it now clears all data and starts loading fresh when re-enabled]])
+
 		pnl:Help([[06 Aug 2020 (Hotfix #2):
 
 			- Fixed the pointcloud folder not being created]])
