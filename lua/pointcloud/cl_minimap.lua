@@ -196,6 +196,11 @@ function pointcloud.Minimap:DrawInfo()
 			self:AddInfoLine("Resolution: %sx", pointcloud.Resolution:GetInt())
 			self:AddInfoLine()
 			self:AddInfoLine("Points: %s", format_number(#pointcloud.PointList))
+
+			if pointcloud.Sampler.Queue:Count() > 0 then
+				self:AddInfoLine("Automap queue: %s", format_number(pointcloud.Sampler.Queue:Count()))
+			end
+
 			self:AddInfoLine("File size: %s", string.NiceSize(pointcloud.Debug.Filesize))
 			self:AddInfoLine()
 			self:AddInfoLine("Active rendertargets: %u", rendertargets)

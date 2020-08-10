@@ -33,4 +33,5 @@ function pointcloud:Clear()
 
 	self.Minimap:Clear()
 	self.Projection:Clear()
+	self.Sampler:Clear()
 end

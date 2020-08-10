@@ -3,6 +3,44 @@ pointcloud.Sampler = pointcloud.Sampler or {}
 pointcloud.Sampler.Mode = CreateClientConVar("pointcloud_samplemode", "1", true, false)
 pointcloud.Sampler.Rate = CreateClientConVar("pointcloud_samplerate", "90", true, false)
 
+local class = {}
+
+function class:Push(item)
+	local index = self.Last + 1
+
+	self.Last = index
+	self.Items[index] = item
+end
+
+function class:Pop()
+	local index = self.First
+
+	if index > self.Last then
+		return -- Empty
+	end
+
+	local item = self.Items[index]
+
+	self.Items[index] = nil
+	self.First = index + 1
+
+	return item
+end
+
+function class:Count()
+	return self.Last - self.First + 1
+end
+
+local function queue()
+	return setmetatable({
+		First = 0,
+		Last = -1,
+		Items = {}
+	}, {__index = class})
+end
+
+pointcloud.Sampler.Queue = pointcloud.Sampler.Queue or queue()
+
 function pointcloud.Sampler:Run()
 	local start = SysTime()
 
@@ -21,9 +59,43 @@ function pointcloud.Sampler:Run()
 
 			self:Trace(lpos, lp:LocalToWorldAngles(ang))
 		end
+	elseif mode == POINTCLOUD_SAMPLE_AUTOMAP then
+		self:RunAutoMapper(rate)
+	end
+
+	if mode != POINTCLOUD_SAMPLE_AUTOMAP and self.Queue:Count() > 0 then
+		self:Clear()
 	end
 
 	pointcloud.Debug.SampleTime = SysTime() - start
+end
+
+function pointcloud.Sampler:Clear()
+	self.Queue = queue()
+end
+
+function pointcloud.Sampler:RunAutoMapper(rate)
+	if self.Queue:Count() == 0 then
+		self.Queue:Push(LocalPlayer():EyePos())
+	end
+
+	for i = 1, rate do
+		local vec = self.Queue:Pop()
+
+		if not vec then
+			return
+		end
+
+		for j = 1, 10 do
+			local ok, pos = self:Trace(vec, AngleRand())
+
+			if ok then
+				debugoverlay.Line(vec, pos, 1, color_white, true)
+
+				self.Queue:Push(pos)
+			end
+		end
+	end
 end
 
 local length = Vector(1, 1, 1):Length()
@@ -36,10 +108,10 @@ function pointcloud.Sampler:Trace(pos, ang)
 	})
 
 	if tr.StartSolid or tr.Fraction == 1 or tr.HitSky or tr.HitNoDraw then
-		return
+		return false
 	end
 
-	self:AddPoint(tr.HitPos, tr.HitNormal)
+	return self:AddPoint(tr.HitPos, tr.HitNormal), tr.HitPos
 end
 
 function pointcloud.Sampler:AddPoint(vec, normal)
@@ -55,7 +127,7 @@ function pointcloud.Sampler:AddPoint(vec, normal)
 	pos:Mul(resolution)
 
 	if pointcloud.Points[tostring(pos)] then
-		return
+		return false
 	end
 
 	pointcloud.Points[tostring(pos)] = true
@@ -63,7 +135,7 @@ function pointcloud.Sampler:AddPoint(vec, normal)
 	local col = render.GetSurfaceColor(vec + normal * 1, vec - normal * 1)
 
 	if col:Length() > length then
-		return
+		return true
 	end
 
 	local contents = util.PointContents(vec)
@@ -112,5 +184,5 @@ function pointcloud.Sampler:AddPoint(vec, normal)
 		end)
 	end
 
-	return
+	return true
 end

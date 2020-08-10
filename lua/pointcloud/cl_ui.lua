@@ -59,7 +59,8 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 			Options = {
 				["0. Disabled"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_NONE},
 				["1. Random noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_NOISE},
-				["2. Front-facing noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_FRONTFACING}
+				["2. Front-facing noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_FRONTFACING},
+				["3. AutoMap (Experimental)"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_AUTOMAP}
 			}
 		})
 		pnl:NumSlider("Sample rate", "pointcloud_samplerate", 20, 180, 0)
