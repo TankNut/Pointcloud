@@ -3,8 +3,12 @@ hook.Add("AddToolMenuCategories", "pointcloud", function()
 end)
 
 hook.Add("PopulateToolMenu", "pointcloud", function()
-	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 06 Aug 2020)", "", "", function(pnl)
+	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 10 Aug 2020)", "", "", function(pnl)
 		pnl:ClearControls()
+
+		pnl:Help([[10 Aug 2020:
+
+			- Added an experimental automap sample mode]])
 
 		pnl:Help([[08 Aug 2020:
 
