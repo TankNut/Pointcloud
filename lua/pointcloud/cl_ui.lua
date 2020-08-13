@@ -3,8 +3,13 @@ hook.Add("AddToolMenuCategories", "pointcloud", function()
 end)
 
 hook.Add("PopulateToolMenu", "pointcloud", function()
-	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 10 Aug 2020)", "", "", function(pnl)
+	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 13 Aug 2020)", "", "", function(pnl)
 		pnl:ClearControls()
+
+		pnl:Help([[13 Aug 2020:
+
+			- Automap now follows the sample rate option instead of doing 10 times as much work
+			- Automap samples can now 'bounce' off of the sky, allowing it to better deal with open areas]])
 
 		pnl:Help([[10 Aug 2020:
 
