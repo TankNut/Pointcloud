@@ -79,6 +79,8 @@ function pointcloud.Sampler:RunAutoMapper(rate)
 		self.Queue:Push(LocalPlayer():EyePos())
 	end
 
+	rate = math.floor(rate / 10)
+
 	for i = 1, rate do
 		local vec = self.Queue:Pop()
 
@@ -107,14 +109,14 @@ function pointcloud.Sampler:Trace(pos, ang)
 		mask = MASK_SOLID_BRUSHONLY
 	})
 
-	if tr.StartSolid or tr.Fraction == 1 or tr.HitSky or tr.HitNoDraw then
+	if tr.StartSolid or tr.Fraction == 1 then
 		return false
 	end
 
-	return self:AddPoint(tr.HitPos, tr.HitNormal), tr.HitPos
+	return self:AddPoint(tr.HitPos, tr.HitNormal, tr.HitSky or tr.HitNoDraw), tr.HitPos
 end
 
-function pointcloud.Sampler:AddPoint(vec, normal)
+function pointcloud.Sampler:AddPoint(vec, normal, sky)
 	local resolution = pointcloud:GetResolution()
 	local pos = vec * (1 / resolution)
 
@@ -131,6 +133,10 @@ function pointcloud.Sampler:AddPoint(vec, normal)
 	end
 
 	pointcloud.Points[tostring(pos)] = true
+
+	if sky then
+		return true
+	end
 
 	local col = render.GetSurfaceColor(vec + normal * 1, vec - normal * 1)
 
