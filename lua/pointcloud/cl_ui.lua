@@ -6,6 +6,10 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 13 Aug 2020)", "", "", function(pnl)
 		pnl:ClearControls()
 
+		pnl:Help([[13 Aug 2020 (Hotfix):
+
+			- Fixed an error when turning off the addon as it's loading a file]])
+
 		pnl:Help([[13 Aug 2020:
 
 			- Automap now follows the sample rate option instead of doing 10 times as much work

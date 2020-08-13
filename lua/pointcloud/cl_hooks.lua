@@ -47,7 +47,7 @@ local function enable(name, old, new)
 	if tobool(new) then
 		pointcloud.Persistence:StartLoader()
 	else
-		if pointcloud.Peristence:IsLoading() then
+		if pointcloud.Persistence:IsLoading() then
 			pointcloud:FinishLoading()
 		else
 			pointcloud.Persistence:Save()
