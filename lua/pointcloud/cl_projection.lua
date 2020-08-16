@@ -117,7 +117,7 @@ function pointcloud.Projection:Draw()
 
 					col = HSVToColor(hue, sat, 1)
 
-					render.DrawSprite(self.Position + (vec * scale), size * 2, size * 2, col)
+					render.DrawSprite(self.Position + (vec * scale), size * 4, size * 4, col)
 				end
 
 				i = i + 1
