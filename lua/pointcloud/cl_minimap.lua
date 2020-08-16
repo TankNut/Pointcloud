@@ -201,12 +201,21 @@ function pointcloud.Minimap:DrawInfo()
 				self:AddInfoLine("Automap queue: %s", format_number(pointcloud.Sampler.Queue:Count()))
 			end
 
-			self:AddInfoLine("File size: %s", string.NiceSize(pointcloud.Debug.Filesize))
+			self:AddInfoLine("File size: %s", string.NiceSize(debugdata.Filesize))
 			self:AddInfoLine()
 			self:AddInfoLine("Active rendertargets: %u", rendertargets)
-			self:AddInfoLine("Sample time: %.2fms", debugdata.SampleTime * 1000)
-			self:AddInfoLine("Minimap draw: %.2fms", debugdata.MinimapTime * 1000)
-			self:AddInfoLine("Projection draw: %.2fms", pointcloud.Projection.Position and debugdata.ProjectionTime * 1000 or 0)
+
+			if pointcloud.Persistence:IsLoading() or pointcloud.Sampler.Mode == POINTCLOUD_SAMPLE_NONE then
+				self:AddInfoLine("Samples: 0 (0ms)")
+			else
+				self:AddInfoLine("Samples: %u (%.2fms)", #pointcloud.Performance.Data.Sampler.Samples, debugdata.SamplerTime * 1000)
+			end
+
+			self:AddInfoLine("Minimap: %.2fms", debugdata.MinimapTime * 1000)
+
+			if pointcloud.Projection.Position then
+				self:AddInfoLine("Projection: %u (%.2fms)", #pointcloud.Performance.Data.Projection.Samples, debugdata.ProjectionTime * 1000)
+			end
 		end
 	cam.End2D()
 end

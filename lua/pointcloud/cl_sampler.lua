@@ -1,7 +1,6 @@
 pointcloud.Sampler = pointcloud.Sampler or {}
 
 pointcloud.Sampler.Mode = CreateClientConVar("pointcloud_samplemode", "1", true, false)
-pointcloud.Sampler.Rate = CreateClientConVar("pointcloud_samplerate", "90", true, false)
 
 local class = {}
 
@@ -43,45 +42,51 @@ pointcloud.Sampler.Queue = pointcloud.Sampler.Queue or queue()
 
 function pointcloud.Sampler:Run()
 	local start = SysTime()
-
 	local lp = LocalPlayer()
 	local lpos = lp:EyePos()
 	local mode = self.Mode:GetInt()
-	local rate = self.Rate:GetInt() + 1
+
+	pointcloud.Performance:UpdateBudget("Sampler")
 
 	if mode == POINTCLOUD_SAMPLE_NOISE then
-		for i = 1, rate do
+		while pointcloud.Performance:HasBudget("Sampler") do
 			self:Trace(lpos, AngleRand())
 		end
 	elseif mode == POINTCLOUD_SAMPLE_FRONTFACING then
-		for i = 1, rate do
+		while pointcloud.Performance:HasBudget("Sampler") do
 			local ang = AngleRand(-45, 45)
 
 			self:Trace(lpos, lp:LocalToWorldAngles(ang))
 		end
 	elseif mode == POINTCLOUD_SAMPLE_AUTOMAP then
-		self:RunAutoMapper(rate)
+		self:RunAutoMapper()
+	elseif mode == POINTCLOUD_SAMPLE_SWEEPING then
+		local yaw = CurTime() * 360
+
+		while pointcloud.Performance:HasBudget("Sampler") do
+			local ang = Angle(math.Rand(-90, 90), math.Rand(yaw - 5, yaw + 5), 0)
+
+			self:Trace(lpos, ang)
+		end
 	end
 
 	if mode != POINTCLOUD_SAMPLE_AUTOMAP and self.Queue:Count() > 0 then
 		self:Clear()
 	end
 
-	pointcloud.Debug.SampleTime = SysTime() - start
+	pointcloud.Debug.SamplerTime = SysTime() - start
 end
 
 function pointcloud.Sampler:Clear()
 	self.Queue = queue()
 end
 
-function pointcloud.Sampler:RunAutoMapper(rate)
+function pointcloud.Sampler:RunAutoMapper()
 	if self.Queue:Count() == 0 then
 		self.Queue:Push(LocalPlayer():EyePos())
 	end
 
-	rate = math.floor(rate / 10)
-
-	for i = 1, rate do
+	while pointcloud.Performance:HasBudget("Sampler") do
 		local vec = self.Queue:Pop()
 
 		if not vec then
@@ -89,11 +94,13 @@ function pointcloud.Sampler:RunAutoMapper(rate)
 		end
 
 		for j = 1, 10 do
+			if not pointcloud.Performance:HasBudget("Sampler") then
+				return
+			end
+
 			local ok, pos = self:Trace(vec, AngleRand())
 
 			if ok then
-				debugoverlay.Line(vec, pos, 1, color_white, true)
-
 				self.Queue:Push(pos)
 			end
 		end
@@ -103,17 +110,24 @@ end
 local length = Vector(1, 1, 1):Length()
 
 function pointcloud.Sampler:Trace(pos, ang)
+	local time = SysTime()
 	local tr = util.TraceLine({
 		start = pos,
-		endpos = pos + (ang:Forward() * 10000),
+		endpos = pos + (ang:Forward() * 32768),
 		mask = MASK_SOLID_BRUSHONLY
 	})
 
 	if tr.StartSolid or tr.Fraction == 1 then
+		pointcloud.Performance:AddSample("Sampler", SysTime() - time)
+
 		return false
 	end
 
-	return self:AddPoint(tr.HitPos, tr.HitNormal, tr.HitSky or tr.HitNoDraw), tr.HitPos
+	local ok = self:AddPoint(tr.HitPos, tr.HitNormal, tr.HitSky or tr.HitNoDraw)
+
+	pointcloud.Performance:AddSample("Sampler", SysTime() - time)
+
+	return ok, tr.HitPos
 end
 
 function pointcloud.Sampler:AddPoint(vec, normal, sky)

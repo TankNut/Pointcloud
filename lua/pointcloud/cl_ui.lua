@@ -3,8 +3,14 @@ hook.Add("AddToolMenuCategories", "pointcloud", function()
 end)
 
 hook.Add("PopulateToolMenu", "pointcloud", function()
-	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 13 Aug 2020)", "", "", function(pnl)
+	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 16 Aug 2020)", "", "", function(pnl)
 		pnl:ClearControls()
+
+		pnl:Help([[16 Aug 2020:
+
+			- Added a new performance system based on frame budgets (Some convars might be reset, renamed or removed because of this)
+			- Added a new radar sweep sample mode
+			- The minimap now hides with the rest of your HUD when using the camera tool]])
 
 		pnl:Help([[13 Aug 2020 (Hotfix):
 
@@ -45,6 +51,7 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 
 			Initial release]])
 	end)
+
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_general", "General settings", "", "", function(pnl)
 		pnl:ClearControls()
 
@@ -62,9 +69,7 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 				["3. Low (128 units/point)"] = {pointcloud_resolution = 128}
 			}
 		})
-		pnl:Help([[The sampler determines how the world around you is discovered and is easily the most performance intensive part of this addon.
-
-			Performance issues can be helped by lowering the sample rate but doing so will slow the mapping process. The sample mode on the other hand is purely there for user preference and has no impact on performance whatsoever.]])
+		pnl:Help([[The sample mode is purely down to user preference and has no impact on performance whatsoever.]])
 		pnl:AddControl("ComboBox", {
 			Label = "Sample mode",
 			MenuButton = 0,
@@ -73,13 +78,10 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 				["0. Disabled"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_NONE},
 				["1. Random noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_NOISE},
 				["2. Front-facing noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_FRONTFACING},
-				["3. AutoMap (Experimental)"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_AUTOMAP}
+				["3. AutoMap (Experimental)"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_AUTOMAP},
+				["4. Radar sweep"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_SWEEPING}
 			}
 		})
-		pnl:NumSlider("Sample rate", "pointcloud_samplerate", 20, 180, 0)
-
-		pnl:Help("Increasing the load budget will decrease the amount of time it takes for a map to load but has the side effect of lowering your FPS until it's done.")
-		pnl:NumSlider("Load budget (ms/frame)", "pointcloud_loadbudget", 20, 200, 0)
 
 		pnl:CheckBox("Show debug info (Requires minimap)", "pointcloud_debug")
 
@@ -96,6 +98,18 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 
 			pointcloud:Clear()
 		end
+	end)
+
+	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_performance", "Performance", "", "", function(pnl)
+		pnl:ClearControls()
+
+		pnl:Help([[Options in this menu determine how many miliseconds certain features of the mod can take up per frame.
+
+			Increasing budgets will lower your FPS but increase the speed of certain actions.]])
+
+		pnl:NumSlider("Load budget", "pointcloud_budget_load", 20, 200, 0)
+		pnl:NumSlider("Sampler budget", "pointcloud_budget_sampler", 5, 40, 0)
+		pnl:NumSlider("Projection budget", "pointcloud_budget_projection", 1, 40, 0)
 	end)
 
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_minimap", "Minimap", "", "", function(pnl)

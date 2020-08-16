@@ -68,12 +68,12 @@ function pointcloud.Persistence:StartLoader()
 end
 
 function pointcloud.Persistence:ProcessLoader()
+	pointcloud.Performance:UpdateBudget("Load")
+
 	local handle = self.FileHandle
+	local time = SysTime()
 
-	local budget = self.Budget:GetInt() * 0.001
-	local start = SysTime()
-
-	while true do
+	while pointcloud.Performance:HasBudget("Load") do
 		if handle:EndOfFile() then
 			self:FinishLoading()
 
@@ -87,9 +87,7 @@ function pointcloud.Persistence:ProcessLoader()
 
 		self:AddLoadedPoint(vec, col)
 
-		if SysTime() - start > budget then
-			break
-		end
+		pointcloud.Performance:AddSample("Load", SysTime() - time)
 	end
 end
 

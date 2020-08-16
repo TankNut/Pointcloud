@@ -80,6 +80,8 @@ function pointcloud.Projection:Draw()
 
 	local mode = self.Mode:GetInt()
 
+	pointcloud.Performance:UpdateBudget("Projection")
+
 	cam.Start3D()
 		local size = resolution * scale * 0.5
 
@@ -95,10 +97,10 @@ function pointcloud.Projection:Draw()
 			render.SetMaterial(sprite)
 		end
 
-		local i = 0
-
 		render.PushRenderTarget(self.RenderTarget)
-			repeat
+			while pointcloud.Performance:HasBudget("Projection") do
+				local time = SysTime()
+
 				if self.DrawIndex >= #self.IndexList then
 					break
 				end
@@ -120,8 +122,8 @@ function pointcloud.Projection:Draw()
 					render.DrawSprite(self.Position + (vec * scale), size * 4, size * 4, col)
 				end
 
-				i = i + 1
-			until i >= 2048
+				pointcloud.Performance:AddSample("Projection", SysTime() - time)
+			end
 		render.PopRenderTarget()
 
 		if mode == POINTCLOUD_MODE_CUBE then

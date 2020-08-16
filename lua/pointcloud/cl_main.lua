@@ -20,6 +20,7 @@ include("cl_minimap.lua")
 include("cl_persistence.lua")
 include("cl_projection.lua")
 include("cl_sampler.lua")
+include("cl_performance.lua")
 
 function pointcloud:GetResolution()
 	return self.Resolution:GetInt()
