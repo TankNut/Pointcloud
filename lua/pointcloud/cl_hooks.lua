@@ -13,7 +13,7 @@ hook.Add("Think", "pointcloud", function()
 end)
 
 hook.Add("PreDrawHUD", "pointcloud", function()
-	if not pointcloud.Enabled:GetBool() then
+	if not pointcloud.Enabled:GetBool() or not hook.Run("HUDShouldDraw", "pointcloud") then
 		return
 	end
 
