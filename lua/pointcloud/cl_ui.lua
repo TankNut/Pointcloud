@@ -134,8 +134,7 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_projection", "Projection", "", "", function(pnl)
 		pnl:ClearControls()
 
-		pnl:NumSlider("Scale", "pointcloud_projection_scale", 0.01, 0.1, 2)
-		pnl:NumSlider("Height offset", "pointcloud_projection_height", 0, 128, 0)
+		pnl:NumSlider("Scale", "pointcloud_projection_scale", 0.001, 0.1, 3)
 
 		pnl:AddControl("ComboBox", {
 			Label = "Render mode",

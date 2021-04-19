@@ -18,19 +18,29 @@ function pointcloud.Persistence:GetFileName(resolution)
 	return "pointcloud/" .. game.GetMap() .. "-" .. resolution .. ".dat"
 end
 
+local function bitPack(vec)
+	return bit.bor(bit.lshift(vec.x, 20), bit.lshift(vec.y, 10), vec.z)
+end
+
+local function bitUnpack(num)
+	return Vector(
+		bit.band(bit.arshift(num, 20), 1023),
+		bit.band(bit.arshift(num, 10), 1023),
+		bit.band(num, 1023)
+	)
+end
+
 function pointcloud.Persistence:Save(resolution)
 	timer.Remove("pointcloud.Save")
 
 	local filename = self:GetFileName(resolution)
 	local handle = file.Open(filename, "ab", "DATA")
 
-	for i = self.Offset, #pointcloud.PointList do
-		local v = pointcloud.PointList[i]
+	for i = self.Offset, #pointcloud.Data.PointList do
+		local v = pointcloud.Data.PointList[i]
 		local col = v[2]:ToColor()
 
-		handle:WriteShort(v[1].x)
-		handle:WriteShort(v[1].y)
-		handle:WriteShort(v[1].z)
+		handle:WriteULong(bitPack(v[1]))
 
 		handle:WriteByte(col.r)
 		handle:WriteByte(col.g)
@@ -39,7 +49,7 @@ function pointcloud.Persistence:Save(resolution)
 
 	handle:Close()
 
-	self.Offset = #pointcloud.PointList
+	self.Offset = #pointcloud.Data.PointList
 
 	pointcloud.Debug.Filesize = file.Size(filename, "DATA")
 end
@@ -80,12 +90,12 @@ function pointcloud.Persistence:ProcessLoader()
 			return
 		end
 
-		local vec = Vector(handle:ReadShort(), handle:ReadShort(), handle:ReadShort())
+		local vec = bitUnpack(handle:ReadULong())
 		local col = Vector(handle:ReadByte(), handle:ReadByte(), handle:ReadByte())
 
 		col:Div(255)
 
-		self:AddLoadedPoint(vec, col)
+		pointcloud.Data:AddSavePoint(vec, col)
 
 		pointcloud.Performance:AddSample("Load", SysTime() - time)
 	end
@@ -97,28 +107,7 @@ function pointcloud.Persistence:FinishLoading()
 	self.FileHandle:Close()
 	self.FileHandle = nil
 
-	self.Offset = #pointcloud.PointList + 1
+	self.Offset = #pointcloud.Data.PointList + 1
 
-	print(string.format("[Pointcloud] Loaded %s points for %s at resolution: %sx", #pointcloud.PointList, game.GetMap(), resolution))
-end
-
-function pointcloud.Persistence:AddLoadedPoint(pos, col)
-	local slice = pos.z * (1 / pointcloud:GetResolution())
-
-	pointcloud.Points[tostring(pos)] = true
-
-	local minimap = pointcloud.Minimap
-	local rendertarget = minimap.RenderTargets[slice]
-
-	if not rendertarget then
-		rendertarget = GetRenderTarget("pointcloud" .. slice, 1024, 1024, true)
-
-		minimap.RenderTargets[slice] = rendertarget
-
-		render.PushRenderTarget(rendertarget)
-			render.Clear(0, 0, 0, 0, true, true)
-		render.PopRenderTarget()
-	end
-
-	pointcloud.PointList[#pointcloud.PointList + 1] = {pos, col}
+	print(string.format("[Pointcloud] Loaded %s points for %s at resolution: %sx", #pointcloud.Data.PointList, game.GetMap(), resolution))
 end

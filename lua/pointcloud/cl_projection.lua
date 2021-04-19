@@ -2,7 +2,6 @@ pointcloud.Projection = pointcloud.Projection or {}
 
 pointcloud.Projection.Key = CreateClientConVar("pointcloud_projection_key", KEY_J, true, true)
 pointcloud.Projection.Scale = CreateClientConVar("pointcloud_projection_scale", "0.01", true, false)
-pointcloud.Projection.Height = CreateClientConVar("pointcloud_projection_height", "32", true, false)
 pointcloud.Projection.Mode = CreateClientConVar("pointcloud_projection_mode", POINTCLOUD_SAMPLE_NOISE, true, false)
 
 pointcloud.Projection.DrawIndex = pointcloud.Projection.DrawIndex or 0
@@ -33,12 +32,10 @@ function pointcloud.Projection:Toggle()
 	else
 		local vec = LocalPlayer():GetEyeTrace().HitPos
 
-		vec.z = vec.z + self.Height:GetInt()
-
 		self.Position = vec
 		self.IndexList = {}
 
-		for i = 1, #pointcloud.PointList do
+		for i = 1, #pointcloud.Data.PointList do
 			self.IndexList[i] = i
 		end
 
@@ -46,6 +43,14 @@ function pointcloud.Projection:Toggle()
 	end
 
 	self.Stored = nil
+end
+
+function pointcloud.Projection:AddPoint(index)
+	if not self.Position then
+		return
+	end
+
+	self.IndexList[#self.IndexList + 1] = index
 end
 
 function pointcloud.Projection:Draw()
@@ -79,6 +84,7 @@ function pointcloud.Projection:Draw()
 	end
 
 	local mode = self.Mode:GetInt()
+	local bounds = game.GetWorld():GetModelBounds()
 
 	pointcloud.Performance:UpdateBudget("Projection")
 
@@ -109,8 +115,8 @@ function pointcloud.Projection:Draw()
 
 				local index = self.IndexList[self.DrawIndex]
 
-				local vec = pointcloud.PointList[index][1]
-				local col = pointcloud.PointList[index][2]:ToColor()
+				local vec = pointcloud.Data:FromData(pointcloud.Data.PointList[index][1]) - Vector(0, 0, bounds.z)
+				local col = pointcloud.Data.PointList[index][2]:ToColor()
 
 				if mode == POINTCLOUD_MODE_CUBE then
 					render.DrawBox(self.Position + (vec * scale), angle_zero, mins, maxs, col)

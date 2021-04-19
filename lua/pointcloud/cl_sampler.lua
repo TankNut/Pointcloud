@@ -131,24 +131,15 @@ function pointcloud.Sampler:Trace(pos, ang)
 end
 
 function pointcloud.Sampler:AddPoint(vec, normal, sky)
-	local resolution = pointcloud:GetResolution()
-	local pos = vec * (1 / resolution)
+	local check = pointcloud.Data:FromWorld(vec)
 
-	pos.x = math.Round(pos.x)
-	pos.y = math.Round(pos.y)
-	pos.z = math.Round(pos.z)
-
-	local slice = pos.z
-
-	pos:Mul(resolution)
-
-	if pointcloud.Points[tostring(pos)] then
+	if pointcloud.Data:Exists(check) then
 		return false
 	end
 
-	pointcloud.Points[tostring(pos)] = true
-
 	if sky then
+		pointcloud.Data:Mark(check)
+
 		return true
 	end
 
@@ -180,29 +171,7 @@ function pointcloud.Sampler:AddPoint(vec, normal, sky)
 		col:Div(255)
 	end
 
-	local minimap = pointcloud.Minimap
-
-	local rendertarget = minimap.RenderTargets[slice]
-
-	if not rendertarget then
-		rendertarget = GetRenderTarget("pointcloud" .. slice, 1024, 1024, true)
-
-		minimap.RenderTargets[slice] = rendertarget
-
-		render.PushRenderTarget(rendertarget)
-			render.Clear(0, 0, 0, 0, true, true)
-		render.PopRenderTarget()
-	end
-
-	pointcloud.PointList[#pointcloud.PointList + 1] = {pos, col}
-
-	if #pointcloud.PointList - pointcloud.Persistence.Offset >= 1000 then
-		pointcloud.Persistence:Save()
-	else
-		timer.Create("pointcloud", 10, 1, function()
-			pointcloud.Persistence:Save()
-		end)
-	end
+	pointcloud.Data:AddTracePoint(vec, col)
 
 	return true
 end

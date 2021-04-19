@@ -38,32 +38,43 @@ function pointcloud.Minimap:HandleZoom(dir)
 	self.Zoom:SetFloat(zoom)
 end
 
+function pointcloud.Minimap:AddPoint(pos, col)
+	local slice = pos.z
+	local rendertarget = self.RenderTargets[slice]
+
+	if not rendertarget then
+		rendertarget = GetRenderTarget("pointcloud" .. slice, 1024, 1024, true)
+
+		self.RenderTargets[slice] = rendertarget
+
+		render.PushRenderTarget(rendertarget)
+			render.Clear(0, 0, 0, 0, true, true)
+		render.PopRenderTarget()
+	end
+end
+
 function pointcloud.Minimap:Draw()
 	local start = SysTime()
 
 	local lpos = LocalPlayer():EyePos()
 	local resolution = pointcloud:GetResolution()
 
-	local baseslice = math.Round(lpos.z * (1 / resolution))
+	local baseslice = math.Round(lpos.z * (1 / resolution)) + 512
 	local i = 0
 
 	repeat
-		if self.DrawIndex >= #pointcloud.PointList then
+		if self.DrawIndex >= #pointcloud.Data.PointList then
 			break
 		end
 
 		self.DrawIndex = self.DrawIndex + 1
 
-		local vec = pointcloud.PointList[self.DrawIndex][1] * (1 / resolution)
-		local col = pointcloud.PointList[self.DrawIndex][2]:ToColor()
+		local vec = pointcloud.Data.PointList[self.DrawIndex][1]
+		local col = pointcloud.Data.PointList[self.DrawIndex][2]:ToColor()
 
 		local rendertarget = self.RenderTargets[vec.z]
 
-		local x, y = math.Remap(-vec.y, -512, 512, 0, 1024), math.Remap(-vec.x, -512, 512, 0, 1024)
-
-		if x < 0 or x > 1024 or y < 0 or y > 1024 then
-			print("Problem:", pointcloud.PointList[self.DrawIndex][1])
-		end
+		local x, y = math.Remap(vec.y, 0, 1024, 1024, 0), math.Remap(vec.x, 0, 1024, 1024, 0)
 
 		render.PushRenderTarget(rendertarget)
 			cam.Start2D()
@@ -179,12 +190,6 @@ function pointcloud.Minimap:DrawInfo()
 			self:AddInfoLine("Loading map data... (%s)", string.NiceSize(debugdata.Filesize))
 		end
 
-		local perc = math.Round((self.DrawIndex / #pointcloud.PointList) * 100)
-
-		if perc < 100 then
-			self:AddInfoLine("Loading minimap... %s%%", perc)
-		end
-
 		if debugdata.Enabled:GetBool() then
 			local rendertargets = debugdata.RenderTargets
 
@@ -195,7 +200,7 @@ function pointcloud.Minimap:DrawInfo()
 			self:AddInfoLine("Map: %s", game.GetMap())
 			self:AddInfoLine("Resolution: %sx", pointcloud.Resolution:GetInt())
 			self:AddInfoLine()
-			self:AddInfoLine("Points: %s", format_number(#pointcloud.PointList))
+			self:AddInfoLine("Points: %s", format_number(#pointcloud.Data.PointList))
 
 			if pointcloud.Sampler.Queue:Count() > 0 then
 				self:AddInfoLine("Automap queue: %s", format_number(pointcloud.Sampler.Queue:Count()))
@@ -205,7 +210,7 @@ function pointcloud.Minimap:DrawInfo()
 			self:AddInfoLine()
 			self:AddInfoLine("Active rendertargets: %u", rendertargets)
 
-			if pointcloud.Persistence:IsLoading() or pointcloud.Sampler.Mode == POINTCLOUD_SAMPLE_NONE then
+			if pointcloud.Persistence:IsLoading() or pointcloud.Sampler.Mode:GetInt() == POINTCLOUD_SAMPLE_NONE then
 				self:AddInfoLine("Samples: 0 (0ms)")
 			else
 				self:AddInfoLine("Samples: %u (%.2fms)", #pointcloud.Performance.Data.Sampler.Samples, debugdata.SamplerTime * 1000)
