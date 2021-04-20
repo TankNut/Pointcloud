@@ -8,8 +8,11 @@ pointcloud.Minimap.ZoomOut = CreateClientConVar("pointcloud_minimap_zoomout", KE
 pointcloud.Minimap.ZoomIn = CreateClientConVar("pointcloud_minimap_zoomin", KEY_NONE, true, true)
 pointcloud.Minimap.ZoomStep = CreateClientConVar("pointcloud_minimap_zoomstep", 0.5, true, false)
 pointcloud.Minimap.LayerDepth = CreateClientConVar("pointcloud_minimap_layerdepth", -1, true, false)
+pointcloud.Minimap.UseMask = CreateClientConVar("pointcloud_minimap_mask", "0", true, false)
 
 pointcloud.Minimap.RenderTargets = pointcloud.Minimap.RenderTargets or {}
+pointcloud.Minimap.RenderMask = GetRenderTarget("pointcloudmask", 1024, 1024, true)
+
 pointcloud.Minimap.DrawIndex = pointcloud.Minimap.DrawIndex or 0
 
 pointcloud.Input:AddHandler("minimap_zoomout", pointcloud.Minimap.ZoomOut, function()
@@ -131,8 +134,8 @@ function pointcloud.Minimap:Draw()
 
 		local counter = 0
 
-		local x = (width * 0.5) - (size * 0.5) + pos.y - 2
-		local y = (height * 0.5) - (size * 0.5) + pos.x - 2
+		local x = (width * 0.5) - (size * 0.5) + pos.y
+		local y = (height * 0.5) - (size * 0.5) + pos.x
 
 		for k, v in SortedPairs(self.RenderTargets) do
 			if k > baseslice or (endpoint and k < baseslice - endpoint) then
@@ -156,12 +159,60 @@ function pointcloud.Minimap:Draw()
 
 		render.SetStencilEnable(false)
 
+		if self.UseMask:GetBool() then
+			self:UpdateMask()
+			pointcloud.Material:SetTexture("$basetexture", self.RenderMask)
+
+			surface.SetDrawColor(255, 255, 255)
+			surface.SetMaterial(pointcloud.Material)
+
+			render.OverrideBlend(true, BLEND_SRC_COLOR, BLEND_ONE, BLENDFUNC_MIN, BLEND_SRC_COLOR, BLEND_DST_ALPHA, BLENDFUNC_ADD)
+
+			render.SetStencilEnable(true)
+			surface.DrawTexturedRectUV(x, y, size, size, u0, v0, u1, v1)
+			render.SetStencilEnable(false)
+
+			render.OverrideBlend(false)
+		end
+
 		surface.SetDrawColor(255, 0, 0)
 		surface.DrawRect((width * 0.5) - 2, (height * 0.5) - 2, 4, 4)
 	cam.End2D()
 
 	pointcloud.Debug.RenderTargets = counter
 	pointcloud.Debug.MinimapTime = SysTime() - start
+end
+
+function pointcloud.Minimap:UpdateMask()
+	render.PushRenderTarget(self.RenderMask)
+		render.Clear(0, 0, 0, 255, true, true)
+
+		local lpos = LocalPlayer():EyePos()
+		local steps = 360
+
+		local verts = {}
+
+		for i = 1, steps do
+			local offset = i * (360 / steps)
+
+			local hit = util.TraceLine({
+				start = lpos,
+				endpos = lpos + (Angle(0, -offset, 0):Forward() * 32768),
+				mask = MASK_SOLID_BRUSHONLY
+			}).HitPos
+
+			local pos = pointcloud.Data:FromWorld(hit)
+			local x, y = math.Remap(pos.y, 0, 1024, 1024, 0), math.Remap(pos.x, 0, 1024, 1024, 0)
+
+			verts[#verts + 1] = {x = x, y = y}
+		end
+
+		cam.Start2D()
+			surface.SetDrawColor(255, 255, 255)
+			draw.NoTexture()
+			surface.DrawPoly(verts)
+		cam.End2D()
+	render.PopRenderTarget()
 end
 
 function pointcloud.Minimap:AddInfoLine(str, ...)

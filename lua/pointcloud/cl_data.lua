@@ -12,8 +12,18 @@ function pointcloud.Data:Exists(pos)
 	return self.Points[tostring(pos)] and true or false
 end
 
-function pointcloud.Data:Mark(pos)
-	self.Points[tostring(pos)] = true
+function pointcloud.Data:Mark(pos, index)
+	self.Points[tostring(pos)] = index or true
+end
+
+function pointcloud.Data:GetColor(pos)
+	local index = self.Points[tostring(pos)]
+
+	if index == true then
+		return -- Marked by hitting the sky or something like that
+	end
+
+	return self.Points[index][2]
 end
 
 local offset = Vector(512, 512, 512)
@@ -45,11 +55,13 @@ function pointcloud.Data:AddPoint(pos, col)
 		return
 	end
 
-	self:Mark(pos)
-	self.PointList[#self.PointList + 1] = {pos, col}
+	local index = #self.PointList + 1
+
+	self:Mark(pos, index)
+	self.PointList[index] = {pos, col}
 
 	pointcloud.Minimap:AddPoint(pos, col)
-	pointcloud.Projection:AddPoint(#self.PointList)
+	pointcloud.Projection:AddPoint(index)
 
 	if not pointcloud.Persistence:IsLoading() then
 		if #self.PointList - pointcloud.Persistence.Offset >= 1000 then
