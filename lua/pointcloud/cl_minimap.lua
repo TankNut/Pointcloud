@@ -190,7 +190,12 @@ function pointcloud.Minimap:UpdateMask()
 		local lpos = LocalPlayer():EyePos()
 		local steps = 360
 
-		local verts = {}
+		local center = pointcloud.Data:FromWorld(lpos)
+
+		local verts = {{
+			x = math.Remap(center.y, 0, 1024, 1024, 0),
+			y = math.Remap(center.x, 0, 1024, 1024, 0)
+		}}
 
 		for i = 1, steps do
 			local offset = i * (360 / steps)
@@ -206,6 +211,8 @@ function pointcloud.Minimap:UpdateMask()
 
 			verts[#verts + 1] = {x = x, y = y}
 		end
+
+		verts[#verts + 1] = verts[2]
 
 		cam.Start2D()
 			surface.SetDrawColor(255, 255, 255)
