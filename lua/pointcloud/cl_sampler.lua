@@ -145,7 +145,9 @@ function pointcloud.Sampler:AddPoint(vec, normal, sky)
 
 	local col = render.GetSurfaceColor(vec + normal * 1, vec - normal * 1)
 
-	if col:Length() > length then
+	if col:Length() > length then -- GetSurfaceColor returns 255,255,255 if it fails to find a surface
+		pointcloud.Data:Mark(check)
+
 		return true
 	end
 
