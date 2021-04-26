@@ -109,22 +109,7 @@ function pointcloud.Minimap:Draw()
 		surface.SetDrawColor(30, 30, 30)
 		surface.DrawRect(0, 0, width, height)
 
-		render.SetStencilWriteMask(0xFF)
-		render.SetStencilTestMask(0xFF)
-		render.SetStencilCompareFunction(STENCIL_ALWAYS)
-		render.SetStencilPassOperation(STENCIL_KEEP)
-		render.SetStencilFailOperation(STENCIL_KEEP)
-		render.SetStencilZFailOperation(STENCIL_KEEP)
-
-		render.SetStencilEnable(true)
-
-		render.ClearStencil()
-
-		render.SetStencilReferenceValue(1)
-
-		render.ClearStencilBufferRectangle(0, 0, width, height, 1)
-
-		render.SetStencilCompareFunction(STENCIL_EQUAL)
+		render.SetScissorRect(0, 0, width, height, true)
 
 		local endpoint = self.LayerDepth:GetInt()
 
@@ -157,22 +142,22 @@ function pointcloud.Minimap:Draw()
 			surface.DrawTexturedRectUV(x, y, size, size, u0, v0, u1, v1)
 		end
 
-		render.SetStencilEnable(false)
+
+		render.SetScissorRect(0, 0, 0, 0, false)
 
 		if self.UseMask:GetBool() then
 			self:UpdateMask()
+
 			pointcloud.Material:SetTexture("$basetexture", self.RenderMask)
 
 			surface.SetDrawColor(255, 255, 255)
 			surface.SetMaterial(pointcloud.Material)
 
-			render.OverrideBlend(true, BLEND_SRC_COLOR, BLEND_ONE, BLENDFUNC_MIN, BLEND_SRC_COLOR, BLEND_DST_ALPHA, BLENDFUNC_ADD)
+			render.SetScissorRect(0, 0, width, height, true)
 
-			render.SetStencilEnable(true)
 			surface.DrawTexturedRectUV(x, y, size, size, u0, v0, u1, v1)
-			render.SetStencilEnable(false)
 
-			render.OverrideBlend(false)
+			render.SetScissorRect(0, 0, 0, 0, false)
 		end
 
 		surface.SetDrawColor(255, 0, 0)
@@ -185,7 +170,7 @@ end
 
 function pointcloud.Minimap:UpdateMask()
 	render.PushRenderTarget(self.RenderMask)
-		render.Clear(0, 0, 0, 255, true, true)
+		render.Clear(0, 0, 0, 0, true, true)
 
 		local lpos = LocalPlayer():EyePos()
 		local steps = 360
@@ -215,9 +200,34 @@ function pointcloud.Minimap:UpdateMask()
 		verts[#verts + 1] = verts[2]
 
 		cam.Start2D()
+			render.SetStencilEnable(true)
+
+			render.SetStencilWriteMask(0xFF)
+			render.SetStencilTestMask(0xFF)
+
+			render.SetStencilCompareFunction(STENCIL_ALWAYS)
+			render.SetStencilReferenceValue(1)
+
+			render.SetStencilPassOperation(STENCIL_REPLACE)
+			render.SetStencilFailOperation(STENCIL_KEEP)
+			render.SetStencilZFailOperation(STENCIL_KEEP)
+
+			render.ClearStencil()
+
 			surface.SetDrawColor(255, 255, 255)
 			draw.NoTexture()
 			surface.DrawPoly(verts)
+
+			render.SetStencilPassOperation(STENCIL_KEEP)
+			render.SetStencilCompareFunction(STENCIL_NOTEQUAL)
+
+			render.Clear(0, 0, 0, 0, false, false)
+
+			surface.SetDrawColor(30, 30, 30)
+
+			surface.DrawRect(0, 0, 1024, 1024)
+
+			render.SetStencilEnable(false)
 		cam.End2D()
 	render.PopRenderTarget()
 end
