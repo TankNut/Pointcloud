@@ -30,4 +30,6 @@ function pointcloud:Clear()
 	self.Sampler:Clear()
 	self.Data:Clear()
 	self.Persistence:Clear()
+
+	pointcloud.Debug.Filesize = 0
 end
