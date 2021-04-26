@@ -56,7 +56,10 @@ local function enable(name, old, new)
 end
 
 local function clearall(name, old, new)
-	pointcloud.Persistence:Save(tonumber(old))
+	if not pointcloud.Persistence:IsLoading() then
+		pointcloud.Persistence:Save(tonumber(old))
+	end
+
 	pointcloud.Persistence:StartLoader()
 end
 
