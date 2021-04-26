@@ -126,6 +126,9 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 			Setting this to -1 will make it render every layer instead.]])
 		pnl:NumSlider("Layer depth", "pointcloud_minimap_layerdepth", -1, 100, 0)
 
+		pnl:CheckBox("Pixelated minimap", "pointcloud_minimap_pixelated")
+		pnl:CheckBox("Pixelated line of sight", "pointcloud_minimap_mask_pixelated")
+
 		pnl:Help("")
 		pnl:ControlHelp("Controls")
 		pnl:AddControl("Numpad", {Label = "Zoom out", Command = "pointcloud_minimap_zoomout", Label2 = "Zoom in", Command2 = "pointcloud_minimap_zoomin"})

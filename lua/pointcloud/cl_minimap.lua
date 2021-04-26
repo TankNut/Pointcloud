@@ -10,6 +10,9 @@ pointcloud.Minimap.ZoomStep = CreateClientConVar("pointcloud_minimap_zoomstep", 
 pointcloud.Minimap.LayerDepth = CreateClientConVar("pointcloud_minimap_layerdepth", -1, true, false)
 pointcloud.Minimap.UseMask = CreateClientConVar("pointcloud_minimap_mask", "0", true, false)
 
+pointcloud.Minimap.PointFilter = CreateClientConVar("pointcloud_minimap_pixelated", "1", true, false)
+pointcloud.Minimap.MaskPointFilter = CreateClientConVar("pointcloud_minimap_mask_pixelated", "0", true, false)
+
 pointcloud.Minimap.RenderTargets = pointcloud.Minimap.RenderTargets or {}
 pointcloud.Minimap.RenderMask = GetRenderTarget("pointcloudmask", 1024, 1024, true)
 
@@ -122,6 +125,11 @@ function pointcloud.Minimap:Draw()
 		local x = (width * 0.5) - (size * 0.5) + pos.y
 		local y = (height * 0.5) - (size * 0.5) + pos.x
 
+		if self.PointFilter:GetBool() then
+			render.PushFilterMag(TEXFILTER.POINT)
+			render.PushFilterMin(TEXFILTER.POINT)
+		end
+
 		for k, v in SortedPairs(self.RenderTargets) do
 			if k > baseslice or (endpoint and k < baseslice - endpoint) then
 				continue
@@ -142,6 +150,10 @@ function pointcloud.Minimap:Draw()
 			surface.DrawTexturedRectUV(x, y, size, size, u0, v0, u1, v1)
 		end
 
+		if self.PointFilter:GetBool() then
+			render.PopFilterMin()
+			render.PopFilterMag()
+		end
 
 		render.SetScissorRect(0, 0, 0, 0, false)
 
@@ -155,7 +167,17 @@ function pointcloud.Minimap:Draw()
 
 			render.SetScissorRect(0, 0, width, height, true)
 
+			if self.MaskPointFilter:GetBool() then
+				render.PushFilterMag(TEXFILTER.POINT)
+				render.PushFilterMin(TEXFILTER.POINT)
+			end
+
 			surface.DrawTexturedRectUV(x, y, size, size, u0, v0, u1, v1)
+
+			if self.MaskPointFilter:GetBool() then
+				render.PopFilterMin()
+				render.PopFilterMag()
+			end
 
 			render.SetScissorRect(0, 0, 0, 0, false)
 		end
