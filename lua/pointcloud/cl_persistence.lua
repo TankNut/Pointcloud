@@ -43,6 +43,11 @@ function pointcloud.Persistence:Save(resolution)
 
 	for i = self.Offset, #pointcloud.Data.PointList do
 		local v = pointcloud.Data.PointList[i]
+
+		if not v then
+			continue
+		end
+
 		local col = v[2]:ToColor()
 
 		handle:WriteULong(bitPack(v[1]))
