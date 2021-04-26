@@ -176,7 +176,7 @@ function pointcloud.Sampler:AddPoint(vec, normal, sky)
 	if sky then
 		pointcloud.Data:Mark(check)
 
-		return false
+		return true
 	end
 
 	local col = render.GetSurfaceColor(vec + normal * 1, vec - normal * 1)
