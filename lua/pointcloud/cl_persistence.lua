@@ -36,6 +36,11 @@ function pointcloud.Persistence:Save(resolution)
 	local filename = self:GetFileName(resolution)
 	local handle = file.Open(filename, "ab", "DATA")
 
+	if handle:Size() == 0 then
+		handle:Write("pointcloud")
+		handle:WriteByte(1) -- Bump this if we ever update the format
+	end
+
 	for i = self.Offset, #pointcloud.Data.PointList do
 		local v = pointcloud.Data.PointList[i]
 		local col = v[2]:ToColor()
@@ -64,17 +69,34 @@ function pointcloud.Persistence:StartLoader()
 
 	pointcloud:Clear()
 
-	if not file.Exists(filename, "DATA") then
-		pointcloud.Debug.Filesize = 0
+	pointcloud.Debug.Filesize = 0
 
-		print(string.format("[Pointcloud] No map data found for %s at resolution: %sx", game.GetMap(), resolution))
+	print(string.format("[Pointcloud] Starting map loader for %s at resolution: %sx", game.GetMap(), resolution))
+
+	if not file.Exists(filename, "DATA") then
+		print("[Pointcloud] Aborting map loader: No map file found")
 
 		return
 	end
 
-	pointcloud.Debug.Filesize = file.Size(filename, "DATA")
-
 	self.FileHandle = file.Open(filename, "rb", "DATA")
+
+	print("[Pointcloud] Map file found: " .. filename)
+
+	pointcloud.Debug.Filesize = self.FileHandle:Size()
+
+	if self.FileHandle:Read(10) != "pointcloud" then
+		print("[Pointcloud] Aborting map loader: Unknown or outdated file format")
+
+		self.FileHandle:Close()
+		self.FileHandle = nil
+
+		file.Delete(filename) -- Sorry
+
+		return
+	end
+
+	self.FileVersion = self.FileHandle:ReadByte()
 end
 
 function pointcloud.Persistence:ProcessLoader()
