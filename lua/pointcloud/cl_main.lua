@@ -29,4 +29,5 @@ function pointcloud:Clear()
 	self.Projection:Clear()
 	self.Sampler:Clear()
 	self.Data:Clear()
+	self.Persistence:Clear()
 end

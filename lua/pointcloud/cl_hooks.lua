@@ -47,9 +47,7 @@ local function enable(name, old, new)
 	if tobool(new) then
 		pointcloud.Persistence:StartLoader()
 	else
-		if pointcloud.Persistence:IsLoading() then
-			pointcloud:FinishLoading()
-		else
+		if not pointcloud.Persistence:IsLoading() then
 			pointcloud.Persistence:Save()
 		end
 
@@ -72,11 +70,17 @@ local function clearprojection()
 	projection.DrawIndex = 0
 end
 
+local function clearsample()
+	pointcloud.Sampler:Clear()
+end
+
 cvars.AddChangeCallback("pointcloud_enabled", enable, "pointcloud")
 cvars.AddChangeCallback("pointcloud_resolution", clearall, "pointcloud")
+
+cvars.AddChangeCallback("pointcloud_samplemode", clearsample, "pointcloud")
+
 cvars.AddChangeCallback("pointcloud_projection_mode", clearprojection, "pointcloud")
 cvars.AddChangeCallback("pointcloud_projection_scale", clearprojection, "pointcloud")
-
 cvars.AddChangeCallback("pointcloud_projection_color_r", clearprojection, "pointcloud")
 cvars.AddChangeCallback("pointcloud_projection_color_g", clearprojection, "pointcloud")
 cvars.AddChangeCallback("pointcloud_projection_color_b", clearprojection, "pointcloud")

@@ -6,6 +6,12 @@ pointcloud.Persistence.Offset = 1
 
 file.CreateDir("pointcloud")
 
+function pointcloud.Persistence:Clear()
+	if self:IsLoading() then
+		self:FinishLoading()
+	end
+end
+
 function pointcloud.Persistence:IsLoading()
 	return tobool(self.FileHandle)
 end

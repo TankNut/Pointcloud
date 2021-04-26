@@ -95,16 +95,16 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 
 		pnl:Help("If you for any reason want to delete all maps or a specific subset, you can find the directory containing the map files in garrysmod/data/pointcloud")
 		pnl:Button("Clear current map (current resolution)").DoClick = function()
-			file.Delete(pointcloud.Persistence:GetFileName())
-
 			pointcloud:Clear()
+
+			file.Delete(pointcloud.Persistence:GetFileName())
 		end
 		pnl:Button("Clear current map (all resolutions)").DoClick = function()
+			pointcloud:Clear()
+
 			for _, v in pairs(file.Find("pointcloud/" .. game.GetMap() .. "-*.dat", "DATA")) do
 				file.Delete("pointcloud/" .. v)
 			end
-
-			pointcloud:Clear()
 		end
 	end)
 
