@@ -146,9 +146,12 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 			CVars = {"pointcloud_projection_mode"},
 			Options = {
 				["1. Cubes"] = {pointcloud_projection_mode = POINTCLOUD_MODE_CUBE},
-				["2. Points"] = {pointcloud_projection_mode = POINTCLOUD_MODE_POINTS}
+				["2. Points"] = {pointcloud_projection_mode = POINTCLOUD_MODE_POINTS},
+				["3. Hologram"] = {pointcloud_projection_mode = POINTCLOUD_MODE_HOLOGRAM}
 			}
 		})
+
+		pnl:AddControl("Color", {Label = "Hologram color", Red = "pointcloud_projection_color_r", Green = "pointcloud_projection_color_g", Blue = "pointcloud_projection_color_b"})
 
 		pnl:Help("There's currently an issue where other addons break the control method used in singleplayer, use this button to toggle projections if that's the case for you")
 		pnl:Button("Manual toggle").DoClick = function()

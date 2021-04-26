@@ -2,7 +2,11 @@ pointcloud.Projection = pointcloud.Projection or {}
 
 pointcloud.Projection.Key = CreateClientConVar("pointcloud_projection_key", KEY_J, true, true)
 pointcloud.Projection.Scale = CreateClientConVar("pointcloud_projection_scale", "0.01", true, false)
-pointcloud.Projection.Mode = CreateClientConVar("pointcloud_projection_mode", POINTCLOUD_SAMPLE_NOISE, true, false)
+pointcloud.Projection.Mode = CreateClientConVar("pointcloud_projection_mode", POINTCLOUD_MODE_CUBE, true, false)
+
+pointcloud.Projection.ColorRed = CreateClientConVar("pointcloud_projection_color_r", "0", true, false)
+pointcloud.Projection.ColorGreen = CreateClientConVar("pointcloud_projection_color_g", "161", true, false)
+pointcloud.Projection.ColorBlue = CreateClientConVar("pointcloud_projection_color_b", "255", true, false)
 
 pointcloud.Projection.DrawIndex = pointcloud.Projection.DrawIndex or 0
 pointcloud.Projection.RenderTarget = GetRenderTarget("pointcloud", 1920, 1080, true)
@@ -125,6 +129,10 @@ function pointcloud.Projection:Draw()
 
 					col = HSVToColor(hue, sat, 1)
 
+					if mode == POINTCLOUD_MODE_HOLOGRAM then
+						col = Color(self.ColorRed:GetInt(), self.ColorGreen:GetInt(), self.ColorBlue:GetInt()) -- TODO: Options
+					end
+
 					render.DrawSprite(self.Position + (vec * scale), size * 4, size * 4, col)
 				end
 
@@ -141,7 +149,7 @@ function pointcloud.Projection:Draw()
 	pointcloud.Material:SetTexture("$basetexture", self.RenderTarget)
 
 	cam.Start2D()
-		if mode == POINTCLOUD_MODE_POINTS then
+		if mode != POINTCLOUD_MODE_CUBE then
 			render.OverrideBlend(true, BLEND_SRC_COLOR, BLEND_ONE, BLENDFUNC_ADD, BLEND_SRC_ALPHA, BLEND_DST_ALPHA, BLENDFUNC_SUBTRACT)
 		end
 
@@ -149,7 +157,7 @@ function pointcloud.Projection:Draw()
 		surface.SetMaterial(pointcloud.Material)
 		surface.DrawTexturedRect(0, 0, ScrW(), ScrH())
 
-		if mode == POINTCLOUD_MODE_POINTS then
+		if mode != POINTCLOUD_MODE_CUBE then
 			render.OverrideBlend(false)
 		end
 	cam.End2D()

@@ -76,3 +76,7 @@ cvars.AddChangeCallback("pointcloud_enabled", enable, "pointcloud")
 cvars.AddChangeCallback("pointcloud_resolution", clearall, "pointcloud")
 cvars.AddChangeCallback("pointcloud_projection_mode", clearprojection, "pointcloud")
 cvars.AddChangeCallback("pointcloud_projection_scale", clearprojection, "pointcloud")
+
+cvars.AddChangeCallback("pointcloud_projection_color_r", clearprojection, "pointcloud")
+cvars.AddChangeCallback("pointcloud_projection_color_g", clearprojection, "pointcloud")
+cvars.AddChangeCallback("pointcloud_projection_color_b", clearprojection, "pointcloud")
