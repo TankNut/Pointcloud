@@ -68,10 +68,43 @@ function pointcloud.Sampler:Run()
 
 			self:Trace(lpos, ang)
 		end
-	end
+	elseif mode == POINTCLOUD_SAMPLE_SATMAP and self.z then
+		local mins, maxs = game.GetWorld():GetModelBounds()
 
-	if mode != POINTCLOUD_SAMPLE_AUTOMAP and self.Queue:Count() > 0 then
-		self:Clear()
+		local min = pointcloud.Data:FromWorld(mins)
+		local max = pointcloud.Data:FromWorld(maxs)
+
+		local res = pointcloud:GetResolution()
+
+		self.x = self.x or min.x
+		self.y = self.y or min.y
+
+		local finished = false
+
+		while pointcloud.Performance:HasBudget("Sampler") and not finished do
+			self.x = self.x + 1
+
+			if self.x == max.x then
+				self.x = min.x
+				self.y = self.y + 1
+
+				if self.y == max.y then
+					finished = true
+				end
+			end
+
+			local vec = pointcloud.Data:FromData(Vector(self.x, self.y, 0))
+
+			vec.x = vec.x + math.Rand(-res * 0.5, res * 0.5)
+			vec.y = vec.y + math.Rand(-res * 0.5, res * 0.5)
+			vec.z = self.z
+
+			self:Trace(vec, Angle(90, 0, 0))
+		end
+
+		if finished then
+			self.Mode:SetInt(POINTCLOUD_SAMPLE_NONE)
+		end
 	end
 
 	pointcloud.Debug.SamplerTime = SysTime() - start
@@ -79,6 +112,9 @@ end
 
 function pointcloud.Sampler:Clear()
 	self.Queue = queue()
+
+	self.x = nil
+	self.y = nil
 end
 
 function pointcloud.Sampler:RunAutoMapper()
@@ -117,7 +153,7 @@ function pointcloud.Sampler:Trace(pos, ang)
 		mask = MASK_SOLID_BRUSHONLY
 	})
 
-	if tr.StartSolid or tr.Fraction == 1 then
+	if tr.Fraction == 1 then
 		pointcloud.Performance:AddSample("Sampler", SysTime() - time)
 
 		return false
@@ -140,7 +176,7 @@ function pointcloud.Sampler:AddPoint(vec, normal, sky)
 	if sky then
 		pointcloud.Data:Mark(check)
 
-		return true
+		return false
 	end
 
 	local col = render.GetSurfaceColor(vec + normal * 1, vec - normal * 1)
