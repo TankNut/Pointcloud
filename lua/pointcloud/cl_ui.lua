@@ -116,6 +116,7 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 		pnl:ClearControls()
 
 		pnl:CheckBox("Enable minimap", "pointcloud_minimap_enabled")
+		pnl:CheckBox("Enable line of sight", "pointcloud_minimap_mask")
 
 		pnl:NumSlider("Width", "pointcloud_minimap_width", 1, ScrW(), 0)
 		pnl:NumSlider("Height", "pointcloud_minimap_height", 1, ScrH(), 0)
