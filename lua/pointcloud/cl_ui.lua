@@ -3,8 +3,16 @@ hook.Add("AddToolMenuCategories", "pointcloud", function()
 end)
 
 hook.Add("PopulateToolMenu", "pointcloud", function()
-	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 16 Aug 2020)", "", "", function(pnl)
+	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 26 Apr 2021)", "", "", function(pnl)
 		pnl:ClearControls()
+
+		pnl:Help([[26 Apr 2021:
+
+			- Improved the way data is stored and saved, reducing file sizes. This unfortunately means that any existing save files no longer work and will have to be remade
+			- Greatly improved automapping behavior, it should no longer get 'stuck' as easily
+			- Added an optional line of sight system to the minimap
+			- Added pixelated filter options to both the minimap and line of sight system
+			- Added a hologram display option to projections]])
 
 		pnl:Help([[16 Aug 2020:
 
