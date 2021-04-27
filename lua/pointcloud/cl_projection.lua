@@ -9,7 +9,7 @@ pointcloud.Projection.ColorGreen = CreateClientConVar("pointcloud_projection_col
 pointcloud.Projection.ColorBlue = CreateClientConVar("pointcloud_projection_color_b", "255", true, false)
 
 pointcloud.Projection.DrawIndex = pointcloud.Projection.DrawIndex or 0
-pointcloud.Projection.RenderTarget = GetRenderTarget("pointcloud", 1920, 1080, true)
+pointcloud.Projection.RenderTarget = GetRenderTarget("pointcloud_projection", 1920, 1080, true)
 
 local sprite = Material("sprites/gmdm_pickups/light")
 
@@ -125,12 +125,12 @@ function pointcloud.Projection:Draw()
 				if mode == POINTCLOUD_MODE_CUBE then
 					render.DrawBox(self.Position + (vec * scale), angle_zero, mins, maxs, col)
 				else
-					local hue, sat = ColorToHSV(col)
-
-					col = HSVToColor(hue, sat, 1)
-
 					if mode == POINTCLOUD_MODE_HOLOGRAM then
-						col = Color(self.ColorRed:GetInt(), self.ColorGreen:GetInt(), self.ColorBlue:GetInt()) -- TODO: Options
+						col = Color(self.ColorRed:GetInt(), self.ColorGreen:GetInt(), self.ColorBlue:GetInt())
+					else
+						local hue, sat = ColorToHSV(col)
+
+						col = HSVToColor(hue, sat, 1)
 					end
 
 					render.DrawSprite(self.Position + (vec * scale), size * 4, size * 4, col)

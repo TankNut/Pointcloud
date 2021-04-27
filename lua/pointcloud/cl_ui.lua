@@ -79,7 +79,7 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 		})
 		pnl:Help([[The sample mode is purely down to user preference and has no impact on performance whatsoever.]])
 		pnl:AddControl("ComboBox", {
-			Label = "Sample mode",
+			Label = "Sample Mode",
 			MenuButton = 0,
 			CVars = {"pointcloud_samplemode"},
 			Options = {
@@ -91,15 +91,15 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 			}
 		})
 
-		pnl:CheckBox("Show debug info (Requires minimap)", "pointcloud_debug")
+		pnl:CheckBox("Show Debug Info (requires minimap)", "pointcloud_debug")
 
 		pnl:Help("If you for any reason want to delete all maps or a specific subset, you can find the directory containing the map files in garrysmod/data/pointcloud")
-		pnl:Button("Clear current map (current resolution)").DoClick = function()
+		pnl:Button("Clear Current Map (current resolution)").DoClick = function()
 			pointcloud:Clear()
 
 			file.Delete(pointcloud.Persistence:GetFileName())
 		end
-		pnl:Button("Clear current map (all resolutions)").DoClick = function()
+		pnl:Button("Clear Current Map (all resolutions)").DoClick = function()
 			pointcloud:Clear()
 
 			for _, v in pairs(file.Find("pointcloud/" .. game.GetMap() .. "-*.dat", "DATA")) do
@@ -115,16 +115,16 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 
 			Increasing budgets will lower your FPS but increase the speed of certain actions.]])
 
-		pnl:NumSlider("Load budget", "pointcloud_budget_load", 20, 200, 0)
-		pnl:NumSlider("Sampler budget", "pointcloud_budget_sampler", 5, 40, 0)
-		pnl:NumSlider("Projection budget", "pointcloud_budget_projection", 1, 40, 0)
+		pnl:NumSlider("Load Budget", "pointcloud_budget_load", 20, 200, 0)
+		pnl:NumSlider("Sampler Budget", "pointcloud_budget_sampler", 5, 40, 0)
+		pnl:NumSlider("Projection Budget", "pointcloud_budget_projection", 1, 40, 0)
 	end)
 
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_minimap", "Minimap", "", "", function(pnl)
 		pnl:ClearControls()
 
-		pnl:CheckBox("Enable minimap", "pointcloud_minimap_enabled")
-		pnl:CheckBox("Enable line of sight", "pointcloud_minimap_mask")
+		pnl:CheckBox("Enable Minimap", "pointcloud_minimap_enabled")
+		pnl:CheckBox("Enable Line of Sight", "pointcloud_minimap_mask")
 
 		pnl:NumSlider("Horizontal Alignment", "pointcloud_minimap_align_x", 0, 1, 2)
 		pnl:NumSlider("Vertical Alignment", "pointcloud_minimap_align_y", 0, 1, 2)
@@ -135,15 +135,24 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 		pnl:Help([[Changing the layer depth will adjust how many layers the minimap can draw below you at any time, which may affect performance on maps with a lot of verticality.
 
 			Setting this to -1 will make it render every layer instead.]])
-		pnl:NumSlider("Layer depth", "pointcloud_minimap_layerdepth", -1, 100, 0)
+		pnl:NumSlider("Layer Depth", "pointcloud_minimap_layerdepth", -1, 100, 0)
+		pnl:NumSlider("Minimap Alpha", "pointcloud_minimap_alpha", 1, 255, 0)
 
-		pnl:CheckBox("Pixelated minimap", "pointcloud_minimap_pixelated")
-		pnl:CheckBox("Pixelated line of sight", "pointcloud_minimap_mask_pixelated")
+		pnl:AddControl("Color", {
+			Label = "Background Color",
+			Red = "pointcloud_minimap_color_r",
+			Green = "pointcloud_minimap_color_g",
+			Blue = "pointcloud_minimap_color_b",
+			Alpha = "pointcloud_minimap_color_a"
+		})
+
+		pnl:CheckBox("Pixelated Minimap", "pointcloud_minimap_pixelated")
+		pnl:CheckBox("Draw Player Position", "pointcloud_minimap_drawplayer")
 
 		pnl:Help("")
 		pnl:ControlHelp("Controls")
-		pnl:AddControl("Numpad", {Label = "Zoom out", Command = "pointcloud_minimap_zoomout", Label2 = "Zoom in", Command2 = "pointcloud_minimap_zoomin"})
-		pnl:NumSlider("Step size", "pointcloud_minimap_zoomstep", 0.1, 1, 1)
+		pnl:AddControl("Numpad", {Label = "Zoom Out", Command = "pointcloud_minimap_zoomout", Label2 = "Zoom In", Command2 = "pointcloud_minimap_zoomin"})
+		pnl:NumSlider("Zoom Step Size", "pointcloud_minimap_zoomstep", 0.1, 1, 1)
 	end)
 
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_projection", "Projection", "", "", function(pnl)
@@ -152,7 +161,7 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 		pnl:NumSlider("Scale", "pointcloud_projection_scale", 0.001, 0.1, 3)
 
 		pnl:AddControl("ComboBox", {
-			Label = "Render mode",
+			Label = "Render Mode",
 			MenuButton = 0,
 			CVars = {"pointcloud_projection_mode"},
 			Options = {
@@ -162,15 +171,20 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 			}
 		})
 
-		pnl:AddControl("Color", {Label = "Hologram color", Red = "pointcloud_projection_color_r", Green = "pointcloud_projection_color_g", Blue = "pointcloud_projection_color_b"})
+		pnl:AddControl("Color", {
+			Label = "Hologram Color",
+			Red = "pointcloud_projection_color_r",
+			Green = "pointcloud_projection_color_g",
+			Blue = "pointcloud_projection_color_b"
+		})
 
-		pnl:Help("There's currently an issue where other addons break the control method used in singleplayer, use this button to toggle projections if that's the case for you")
-		pnl:Button("Manual toggle").DoClick = function()
+		pnl:Help("There's currently an issue where other addons can break the control method used in singleplayer, use this button to toggle projections if that's the case for you")
+		pnl:Button("Manual Toggle").DoClick = function()
 			pointcloud.Projection:Toggle()
 		end
 
 		pnl:Help("")
 		pnl:ControlHelp("Controls")
-		pnl:AddControl("Numpad", {Label = "Toggle projection", Command = "pointcloud_projection_key", ButtonSize = 22})
+		pnl:AddControl("Numpad", {Label = "Toggle Projection", Command = "pointcloud_projection_key", ButtonSize = 22})
 	end)
 end)
