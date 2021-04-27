@@ -230,7 +230,7 @@ function pointcloud.Minimap:DrawMapLayers()
 	local lpos = LocalPlayer():EyePos()
 	local resolution = pointcloud:GetResolution()
 
-	local baseslice = math.Round(lpos.z * (1 / resolution)) + 512
+	local baseslice = math.ceil(lpos.z * (1 / resolution)) + 512
 
 	local endpoint = self.LayerDepth:GetInt()
 
