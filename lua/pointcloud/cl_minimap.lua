@@ -1,6 +1,8 @@
 pointcloud.Minimap = pointcloud.Minimap or {}
 
 pointcloud.Minimap.Enabled = CreateClientConVar("pointcloud_minimap_enabled", "1", true, false)
+pointcloud.Minimap.AlignX = CreateClientConVar("pointcloud_minimap_align_x", "0", true, false)
+pointcloud.Minimap.AlignY = CreateClientConVar("pointcloud_minimap_align_y", "0", true, false)
 pointcloud.Minimap.Width = CreateClientConVar("pointcloud_minimap_width", "300", true, false)
 pointcloud.Minimap.Height = CreateClientConVar("pointcloud_minimap_height", "300", true, false)
 pointcloud.Minimap.Zoom = CreateClientConVar("pointcloud_minimap_zoom", "1", true, false)
@@ -59,13 +61,7 @@ function pointcloud.Minimap:AddPoint(pos, col)
 	end
 end
 
-function pointcloud.Minimap:Draw()
-	local start = SysTime()
-
-	local lpos = LocalPlayer():EyePos()
-	local resolution = pointcloud:GetResolution()
-
-	local baseslice = math.Round(lpos.z * (1 / resolution)) + 512
+function pointcloud.Minimap:DrawPoints()
 	local i = 0
 
 	repeat
@@ -89,9 +85,24 @@ function pointcloud.Minimap:Draw()
 			cam.End2D()
 		render.PopRenderTarget()
 	until i >= 2048
+end
+
+function pointcloud.Minimap:Draw()
+	local start = SysTime()
+
+	local lpos = LocalPlayer():EyePos()
+	local resolution = pointcloud:GetResolution()
+
+	local baseslice = math.Round(lpos.z * (1 / resolution)) + 512
+
+	self:DrawPoints()
 
 	local width = self.Width:GetInt()
 	local height = self.Height:GetInt()
+
+	local baseX = math.Remap(self.AlignX:GetFloat(), 0, 1, 0, ScrW() - width)
+	local baseY = math.Remap(self.AlignY:GetFloat(), 0, 1, 0, ScrH() - height)
+
 	local zoom = self.Zoom:GetFloat()
 
 	local pos = lpos * (1 / resolution)
@@ -110,9 +121,9 @@ function pointcloud.Minimap:Draw()
 
 	cam.Start2D()
 		surface.SetDrawColor(30, 30, 30)
-		surface.DrawRect(0, 0, width, height)
+		surface.DrawRect(baseX, baseY, width, height)
 
-		render.SetScissorRect(0, 0, width, height, true)
+		render.SetScissorRect(baseX, baseY, baseX + width, baseY + height, true)
 
 		local endpoint = self.LayerDepth:GetInt()
 
@@ -147,7 +158,7 @@ function pointcloud.Minimap:Draw()
 
 			surface.SetDrawColor(col, col, col, col)
 			surface.SetMaterial(pointcloud.Material)
-			surface.DrawTexturedRectUV(x, y, size, size, u0, v0, u1, v1)
+			surface.DrawTexturedRectUV(baseX + x, baseY + y, size, size, u0, v0, u1, v1)
 		end
 
 		if self.PointFilter:GetBool() then
@@ -165,14 +176,14 @@ function pointcloud.Minimap:Draw()
 			surface.SetDrawColor(255, 255, 255)
 			surface.SetMaterial(pointcloud.Material)
 
-			render.SetScissorRect(0, 0, width, height, true)
+			render.SetScissorRect(baseX, baseY, baseX + width, baseY + height, true)
 
 			if self.MaskPointFilter:GetBool() then
 				render.PushFilterMag(TEXFILTER.POINT)
 				render.PushFilterMin(TEXFILTER.POINT)
 			end
 
-			surface.DrawTexturedRectUV(x, y, size, size, u0, v0, u1, v1)
+			surface.DrawTexturedRectUV(baseX + x, baseY + y, size, size, u0, v0, u1, v1)
 
 			if self.MaskPointFilter:GetBool() then
 				render.PopFilterMin()
@@ -183,7 +194,7 @@ function pointcloud.Minimap:Draw()
 		end
 
 		surface.SetDrawColor(255, 0, 0)
-		surface.DrawRect((width * 0.5) - 2, (height * 0.5) - 2, 4, 4)
+		surface.DrawRect(baseX + (width * 0.5) - 2, baseY + (height * 0.5) - 2, 4, 4)
 	cam.End2D()
 
 	pointcloud.Debug.RenderTargets = counter
@@ -255,8 +266,14 @@ function pointcloud.Minimap:UpdateMask()
 end
 
 function pointcloud.Minimap:AddInfoLine(str, ...)
+	local width = self.Width:GetInt()
+	local height = self.Height:GetInt()
+
+	local baseX = math.Remap(self.AlignX:GetFloat(), 0, 1, 0, ScrW() - width)
+	local baseY = math.Remap(self.AlignY:GetFloat(), 0, 1, 0, ScrH() - height)
+
 	if str then
-		draw.DrawText(string.format(str, ...), "BudgetLabel", 3, self.InfoLine * 12, color_white, TEXT_ALIGN_LEFT)
+		draw.DrawText(string.format(str, ...), "BudgetLabel", baseX + 3, baseY + self.InfoLine * 12, color_white, TEXT_ALIGN_LEFT)
 	end
 
 	self.InfoLine = self.InfoLine + 1
