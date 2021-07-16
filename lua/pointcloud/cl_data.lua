@@ -8,16 +8,20 @@ function pointcloud.Data:Clear()
 	self.PointList = {}
 end
 
+local function bitPack(vec)
+	return bit.bor(bit.lshift(vec.x, 20), bit.lshift(vec.y, 10), vec.z)
+end
+
 function pointcloud.Data:Exists(pos)
-	return self.Points[tostring(pos)] and true or false
+	return self.Points[bitPack(pos)] and true or false
 end
 
 function pointcloud.Data:Mark(pos, index)
-	self.Points[tostring(pos)] = index or true
+	self.Points[bitPack(pos)] = index or true
 end
 
 function pointcloud.Data:GetColor(pos)
-	local index = self.Points[tostring(pos)]
+	local index = self.Points[bitPack(pos)]
 
 	if index == true then
 		return -- Marked by hitting the sky or something like that
@@ -26,17 +30,16 @@ function pointcloud.Data:GetColor(pos)
 	return self.Points[index][2]
 end
 
-local offset = Vector(512, 512, 512)
+local offset = 512
 
 function pointcloud.Data:FromWorld(pos)
 	pos = Vector(pos)
 
 	pos:Mul(1 / pointcloud:GetResolution())
-	pos:Add(offset)
 
-	pos.x = math.Round(pos.x)
-	pos.y = math.Round(pos.y)
-	pos.z = math.Round(pos.z)
+	pos.x = math.Round(pos.x) + offset
+	pos.y = math.Round(pos.y) + offset
+	pos.z = math.Round(pos.z) + offset
 
 	return pos
 end
@@ -44,7 +47,10 @@ end
 function pointcloud.Data:FromData(pos)
 	pos = Vector(pos)
 
-	pos:Sub(offset)
+	pos.x = pos.x - offset
+	pos.y = pos.y - offset
+	pos.z = pos.z - offset
+
 	pos:Mul(pointcloud:GetResolution())
 
 	return pos
@@ -74,12 +80,6 @@ function pointcloud.Data:AddPoint(pos, col)
 	end
 
 	return true
-end
-
-function pointcloud.Data:AddTracePoint(pos, col)
-	pos = self:FromWorld(pos)
-
-	self:AddPoint(pos, col)
 end
 
 function pointcloud.Data:AddSavePoint(pos, col)
