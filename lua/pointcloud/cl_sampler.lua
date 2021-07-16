@@ -139,21 +139,20 @@ function pointcloud.Sampler:RunAutoMapper()
 	end
 end
 
-local length = Vector(1, 1, 1):Length()
-
 function pointcloud.Sampler:Trace(pos, ang)
 	local time = SysTime()
-	local tr = util.TraceLine({
-		start = pos,
-		endpos = pos + (ang:Forward() * 32768),
-		mask = MASK_SOLID_BRUSHONLY
-	})
 
-	if tr.Fraction == 1 then
+	if util.PointContents(pos) == CONTENTS_SOLID then
 		pointcloud.Performance:AddSample("Sampler", SysTime() - time)
 
 		return false
 	end
+
+	local tr = util.TraceLine({
+		start = pos,
+		endpos = pos + (ang:Forward() * 32768),
+		filter = function(ent) return ent:IsWorld() end,
+	})
 
 	local ok = self:AddPoint(tr.HitPos, tr.HitNormal, tr.HitSky or tr.HitNoDraw)
 
@@ -161,6 +160,8 @@ function pointcloud.Sampler:Trace(pos, ang)
 
 	return ok, tr.HitPos
 end
+
+local length = Vector(1, 1, 1):Length()
 
 function pointcloud.Sampler:AddPoint(vec, normal, sky)
 	local pos = pointcloud.Data:FromWorld(vec)
