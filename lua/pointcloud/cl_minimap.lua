@@ -305,6 +305,7 @@ function pointcloud.Minimap:DrawInfo()
 
 			self:AddInfoLine("Map: %s", game.GetMap())
 			self:AddInfoLine("Resolution: %sx", pointcloud.Resolution:GetInt())
+			self:AddInfoLine("Zoom: %sx", pointcloud.Minimap.Zoom:GetFloat())
 			self:AddInfoLine()
 			self:AddInfoLine("Points: %s", format_number(#pointcloud.Data.PointList))
 
