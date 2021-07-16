@@ -118,18 +118,14 @@ function pointcloud.Sampler:Clear()
 end
 
 function pointcloud.Sampler:RunAutoMapper()
-	if self.Queue:Count() == 0 then
-		self.Queue:Push(LocalPlayer():EyePos())
-	end
-
 	while pointcloud.Performance:HasBudget("Sampler") do
 		local vec = self.Queue:Pop()
 
 		if not vec then
-			return
+			vec = LocalPlayer():EyePos()
 		end
 
-		for j = 1, 10 do
+		for j = 1, 8 do
 			if not pointcloud.Performance:HasBudget("Sampler") then
 				return
 			end
