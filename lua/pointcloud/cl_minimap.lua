@@ -313,6 +313,14 @@ function pointcloud.Minimap:DrawInfo()
 				self:AddInfoLine("Automap queue: %s", format_number(pointcloud.Sampler.Queue:Count()))
 			end
 
+			if pointcloud.Sampler.Mode:GetInt() == POINTCLOUD_SAMPLE_OCTREE then
+				self:AddInfoLine("Octree depth: %s", format_number(pointcloud.Sampler.OctreeDepth))
+
+				if pointcloud.Sampler.x then
+					self:AddInfoLine("Octree position: %s, %s, %s (%s)", format_number(pointcloud.Sampler.x), format_number(pointcloud.Sampler.y), format_number(pointcloud.Sampler.z), format_number(2^ pointcloud.Sampler.OctreeDepth))
+				end
+			end
+
 			self:AddInfoLine("File size: %s", string.NiceSize(debugdata.Filesize))
 			self:AddInfoLine()
 			self:AddInfoLine("Active rendertargets: %u", rendertargets)

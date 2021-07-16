@@ -87,7 +87,8 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 				["1. Random noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_NOISE},
 				["2. Front-facing noise"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_FRONTFACING},
 				["3. AutoMap (Experimental)"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_AUTOMAP},
-				["4. Radar sweep"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_SWEEPING}
+				["4. Radar sweep"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_SWEEPING},
+				["5. Octree (Experimental)"] = {pointcloud_samplemode = POINTCLOUD_SAMPLE_OCTREE}
 			}
 		})
 
