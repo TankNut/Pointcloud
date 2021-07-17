@@ -193,23 +193,23 @@ end
 function pointcloud.Sampler:Trace(pos, ang)
 	local time = SysTime()
 
-	if util.PointContents(pos) == CONTENTS_SOLID then
-		pointcloud.Performance:AddSample("Sampler", SysTime() - time)
-
-		return false
-	end
-
 	local tr = util.TraceLine({
 		start = pos,
 		endpos = pos + (ang:Forward() * 32768),
 		filter = function(ent) return ent:IsWorld() end,
 	})
 
+	if tr.StartSolid or tr.Fraction == 1 then
+		pointcloud.Performance:AddSample("Sampler", SysTime() - time)
+
+		return false
+	end
+
 	local ok = self:AddPoint(tr.HitPos, tr.HitNormal, tr.HitSky or tr.HitNoDraw)
 
 	pointcloud.Performance:AddSample("Sampler", SysTime() - time)
 
-	return ok, tr.HitPos
+	return ok, tr.HitPos + tr.HitNormal
 end
 
 local length = Vector(1, 1, 1):Length()
