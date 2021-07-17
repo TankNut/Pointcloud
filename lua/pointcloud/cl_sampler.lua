@@ -152,6 +152,22 @@ function pointcloud.Sampler:Run()
 				end
 			end
 		end
+	elseif mode == POINTCLOUD_SAMPLE_BSP then
+		if not pointcloud.BSP.Leafs then
+			pointcloud.BSP:Load()
+		end
+
+		local leafs = pointcloud.BSP.Leafs
+
+		while pointcloud.Performance:HasBudget("Sampler") do
+			local leaf = leafs[math.random(1, #leafs)]
+
+			self:Trace(Vector(
+				math.Rand(leaf.Mins.x, leaf.Maxs.x),
+				math.Rand(leaf.Mins.y, leaf.Maxs.y),
+				math.Rand(leaf.Mins.z, leaf.Maxs.z)
+			), AngleRand())
+		end
 	end
 
 	pointcloud.Debug.SamplerTime = SysTime() - start

@@ -19,6 +19,7 @@ include("cl_projection.lua")
 include("cl_sampler.lua")
 include("cl_performance.lua")
 include("cl_data.lua")
+include("cl_bsp.lua")
 
 function pointcloud:GetResolution()
 	return self.Resolution:GetInt()
