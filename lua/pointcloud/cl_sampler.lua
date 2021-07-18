@@ -105,53 +105,6 @@ function pointcloud.Sampler:Run()
 		if finished then
 			self.Mode:SetInt(POINTCLOUD_SAMPLE_NONE)
 		end
-	elseif mode == POINTCLOUD_SAMPLE_OCTREE then
-		local axis = 2 ^ self.OctreeDepth
-		local res = 32768 / axis
-
-		local offset = Vector(0.5, 0.5, 0.5) * 32768
-
-		if self.x == nil then
-			self.x = 0
-			self.y = 0
-			self.z = 0
-		end
-
-		local mins, maxs = game.GetWorld():GetModelBounds()
-
-		while pointcloud.Performance:HasBudget("Sampler") do
-			local mid = Vector(self.x * res + res, self.y * res + res, self.z * res + res) - offset
-
-			if mid:WithinAABox(mins, maxs) then
-				for i = self.OctreeIndex, 10 do
-					if not pointcloud.Performance:HasBudget("Sampler") then
-						return
-					end
-
-					self.OctreeIndex = i
-
-					self:Trace(VectorRand(-res, res) + mid, AngleRand())
-				end
-			end
-
-			self.OctreeIndex = 1
-
-			self.x = (self.x + 1) % axis
-
-			if self.x == 0 then
-				self.y = (self.y + 1) % axis
-
-				if self.y == 0 then
-					self.z = (self.z + 1) % axis
-
-					if self.z == 0 then
-						self.OctreeDepth = self.OctreeDepth + 1
-
-						return
-					end
-				end
-			end
-		end
 	elseif mode == POINTCLOUD_SAMPLE_BSP then
 		if not pointcloud.BSP.Leafs then
 			pointcloud.BSP:Load()
