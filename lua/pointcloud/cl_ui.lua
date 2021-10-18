@@ -6,6 +6,15 @@ hook.Add("PopulateToolMenu", "pointcloud", function()
 	spawnmenu.AddToolMenuOption("Options", "Pointcloud", "pointcloud_changelog", "Changelog (Last updated: 26 Apr 2021)", "", "", function(pnl)
 		pnl:ClearControls()
 
+		pnl:Help([[18 Oct 2021:
+
+			- Massively improved performance across the board
+			- Added horizontal and vertical alignment options for the minimap
+			- Reworked minimap rendering. Adding systems to support transparency, custom background colors (including transparency) smooth/pixelated rendering and even a line of sight system.
+			- Added an experimental BSP leaf sampler
+			- Completely reworked how the automapper works, instead of doing noise-based mapping it now 'crawls' along a map, mapping all the surfaces it can reach
+			]])
+
 		pnl:Help([[26 Apr 2021:
 
 			- Improved the way data is stored and saved, reducing file sizes. This unfortunately means that any existing save files no longer work and will have to be remade
