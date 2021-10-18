@@ -17,22 +17,24 @@ register("Projection", CreateClientConVar("pointcloud_budget_projection", "10", 
 
 function pointcloud.Performance:UpdateBudget(key)
 	local data = self.Data[key]
+	local samples = data.Samples
 
-	if #data.Samples == 0 then
+	if #samples == 0 then
 		data.Cost = 0
 	else
 		local cost = 0
 
-		for _, v in ipairs(data.Samples) do
-			cost = cost + v
+		for i = 1, #samples do
+			cost = cost + samples[i]
 		end
 
-		data.Cost = cost / #data.Samples
+		data.Cost = cost / #samples
 	end
 
-	table.Empty(data.Samples)
+	data.Samples = {}
 
 	data.Start = SysTime()
+	data.Cache = data.Convar:GetInt()
 end
 
 function pointcloud.Performance:AddSample(key, time)
@@ -53,5 +55,5 @@ function pointcloud.Performance:HasBudget(key)
 		return true
 	end
 
-	return time + data.Cost <= (data.Convar:GetInt() * 0.001)
+	return time + data.Cost <= (data.Cache * 0.001)
 end

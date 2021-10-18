@@ -59,6 +59,7 @@ end
 
 function pointcloud.Projection:Draw()
 	local start = SysTime()
+	local pData = pointcloud.Data
 
 	local resolution = pointcloud:GetResolution()
 	local scale = self.Scale:GetFloat()
@@ -118,9 +119,11 @@ function pointcloud.Projection:Draw()
 				self.DrawIndex = self.DrawIndex + 1
 
 				local index = self.IndexList[self.DrawIndex]
+				local vec = pData:FromData(pData.PointList[index][1])
 
-				local vec = pointcloud.Data:FromData(pointcloud.Data.PointList[index][1]) - Vector(0, 0, bounds.z)
-				local col = pointcloud.Data.PointList[index][2]:ToColor()
+				vec.z = vec.z - bounds.z
+
+				local col = pData.PointList[index][2]:ToColor()
 
 				if mode == POINTCLOUD_MODE_CUBE then
 					render.DrawBox(self.Position + (vec * scale), angle_zero, mins, maxs, col)

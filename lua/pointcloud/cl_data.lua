@@ -45,13 +45,13 @@ function pointcloud.Data:FromWorld(pos)
 end
 
 function pointcloud.Data:FromData(pos)
+	local res = pointcloud:GetResolution()
+
 	pos = Vector(pos)
 
-	pos.x = pos.x - offset
-	pos.y = pos.y - offset
-	pos.z = pos.z - offset
-
-	pos:Mul(pointcloud:GetResolution())
+	pos.x = (pos.x - offset) * res
+	pos.y = (pos.y - offset) * res
+	pos.z = (pos.z - offset) * res
 
 	return pos
 end
