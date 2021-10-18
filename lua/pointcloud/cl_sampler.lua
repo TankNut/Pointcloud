@@ -39,6 +39,7 @@ local function queue()
 end
 
 pointcloud.Sampler.Queue = pointcloud.Sampler.Queue or queue()
+pointcloud.Sampler.Lookup = pointcloud.Sampler.Lookup or {}
 
 function pointcloud.Sampler:Run()
 	local start = SysTime()
@@ -128,57 +129,93 @@ end
 
 function pointcloud.Sampler:Clear()
 	self.Queue = queue()
+	self.Lookup = {}
 
 	self.x = nil
 	self.y = nil
 	self.z = nil
-
-	self.OctreeIndex = 1
-	self.OctreeDepth = 1
 end
 
-function pointcloud.Sampler:RunAutoMapper()
-	while pointcloud.Performance:HasBudget("Sampler") do
-		local vec = self.Queue:Pop()
+local function bitPack(vec)
+	return bit.bor(bit.lshift(vec.x, 20), bit.lshift(vec.y, 10), vec.z)
+end
 
-		if not vec then
-			vec = LocalPlayer():EyePos()
+local dirs = {
+	Angle(0, 0, 0),
+	Angle(0, 90, 0),
+	Angle(0, 180, 0),
+	Angle(0, 270, 0),
+	Angle(90, 0, 0),
+	Angle(-90, 0, 0)
+}
+
+function pointcloud.Sampler:RunAutoMapper()
+	local res = pointcloud:GetResolution()
+
+	while pointcloud.Performance:HasBudget("Sampler") do
+		local data = self.Queue:Pop()
+
+		if not data then
+			data = {LocalPlayer():WorldSpaceCenter(), 0}
 		end
 
-		for j = 1, 8 do
+		local vec = data[1]
+		local depth = data[2]
+
+		local points = {}
+		local hit = false
+
+		for i = 1, 6 do
 			if not pointcloud.Performance:HasBudget("Sampler") then
 				return
 			end
 
-			local ok, pos = self:Trace(vec, AngleRand())
+			local ok, pos, tr = self:Trace(vec, dirs[i], res)
+			local pack = bitPack(pointcloud.Data:FromWorld(pos))
 
-			if ok then
-				self.Queue:Push(pos)
+			if ok and not tr.HitSky then
+				hit = true
+			end
+
+			if not ok and not tr.StartSolid and not self.Lookup[pack] then
+				points[#points + 1] = {pos, pack}
+			end
+		end
+
+		if hit or depth < 1 then
+			local newDepth = hit and 0 or depth + 1
+			for i = 1, #points do
+				local tab = points[i]
+
+				self.Lookup[tab[2]] = true
+				self.Queue:Push({tab[1], newDepth})
 			end
 		end
 	end
 end
 
-function pointcloud.Sampler:Trace(pos, ang)
+function pointcloud.Sampler:Trace(pos, ang, dist)
 	local time = SysTime()
+
+	dist = dist or 32768
 
 	local tr = util.TraceLine({
 		start = pos,
-		endpos = pos + (ang:Forward() * 32768),
+		endpos = pos + (ang:Forward() * dist),
 		filter = function(ent) return ent:IsWorld() end,
 	})
 
 	if tr.StartSolid or tr.Fraction == 1 then
 		pointcloud.Performance:AddSample("Sampler", SysTime() - time)
 
-		return false
+		return false, tr.HitPos, tr
 	end
 
 	local ok = self:AddPoint(tr.HitPos, tr.HitNormal, tr.HitSky or tr.HitNoDraw)
 
 	pointcloud.Performance:AddSample("Sampler", SysTime() - time)
 
-	return ok, tr.HitPos + tr.HitNormal
+	return ok, tr.HitPos + tr.HitNormal, tr
 end
 
 local length = Vector(1, 1, 1):Length()
