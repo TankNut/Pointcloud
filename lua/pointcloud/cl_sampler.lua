@@ -96,8 +96,8 @@ function pointcloud.Sampler:Run()
 
 			local vec = pointcloud.Data:FromData(Vector(self.x, self.y, 0))
 
-			vec.x = vec.x + math.Rand(-res * 0.5, res * 0.5)
-			vec.y = vec.y + math.Rand(-res * 0.5, res * 0.5)
+			-- vec.x = vec.x + math.Rand(-res * 0.5, res * 0.5)
+			-- vec.y = vec.y + math.Rand(-res * 0.5, res * 0.5)
 			vec.z = self.z
 
 			self:Trace(vec, Angle(90, 0, 0))
@@ -194,6 +194,8 @@ function pointcloud.Sampler:RunAutoMapper()
 	end
 end
 
+local filter = FindMetaTable("Entity").IsWorld
+
 function pointcloud.Sampler:Trace(pos, ang, dist)
 	local time = SysTime()
 
@@ -202,7 +204,7 @@ function pointcloud.Sampler:Trace(pos, ang, dist)
 	local tr = util.TraceLine({
 		start = pos,
 		endpos = pos + (ang:Forward() * dist),
-		filter = function(ent) return ent:IsWorld() end,
+		filter = filter,
 	})
 
 	if tr.StartSolid or tr.Fraction == 1 then

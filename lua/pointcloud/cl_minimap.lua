@@ -27,12 +27,18 @@ pointcloud.Minimap.RenderTarget = GetRenderTarget("pointcloud_minimap", 1024, 10
 
 pointcloud.Minimap.DrawIndex = pointcloud.Minimap.DrawIndex or 0
 
+pointcloud.Minimap.DoExport = false
+
 pointcloud.Input:AddHandler("minimap_zoomout", pointcloud.Minimap.ZoomOut, function()
 	pointcloud.Minimap:HandleZoom(false)
 end)
 
 pointcloud.Input:AddHandler("minimap_zoomin", pointcloud.Minimap.ZoomIn, function()
 	pointcloud.Minimap:HandleZoom(true)
+end)
+
+concommand.Add("pointcloud_export_minimap", function()
+	pointcloud.Minimap.DoExport = true
 end)
 
 -- See: https://wiki.facepunch.com/gmod/surface.DrawTexturedRectUV
@@ -142,6 +148,18 @@ function pointcloud.Minimap:Draw()
 
 			render.SetStencilEnable(false)
 		cam.End2D()
+
+		if self.DoExport then
+			file.Write("pointcloud_export.png", render.Capture({
+				format = "png",
+				x = 0,
+				y = 0,
+				w = 1024,
+				h = 1024,
+				alpha = true
+			}))
+			self.DoExport = false
+		end
 	render.PopRenderTarget()
 
 	pointcloud.Material:SetTexture("$basetexture", self.RenderTarget)
