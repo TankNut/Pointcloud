@@ -197,30 +197,41 @@ function pointcloud.Sampler:RunAutoMapper()
 	end
 end
 
-local filter = FindMetaTable("Entity").IsWorld
+local red = Color(255, 0, 0)
+local green = Color(0, 255, 0)
+
+local result = {}
+local trace = {
+	mask = MASK_SOLID_BRUSHONLY,
+	output = result
+}
 
 function pointcloud.Sampler:Trace(pos, ang, dist)
 	local time = SysTime()
+	local forward = ang:Forward()
 
 	dist = dist or 32768
+	forward:Mul(dist)
 
-	local tr = util.TraceLine({
-		start = pos,
-		endpos = pos + (ang:Forward() * dist),
-		filter = filter,
-	})
+	trace.start = pos
+	trace.endpos = pos + forward
 
-	if tr.StartSolid or tr.Fraction == 1 then
+	util.TraceLine(trace)
+
+	if result.StartSolid or result.Fraction == 1 then
 		pointcloud.Performance:AddSample("Sampler", SysTime() - time)
+		-- debugoverlay.Line(tr.StartPos, tr.HitPos, 1, red, true)
 
-		return false, tr.HitPos, tr
+		return false, result.HitPos, result
 	end
 
-	local ok = self:AddPoint(tr.HitPos, tr.HitNormal, tr.HitSky or tr.HitNoDraw)
+	local ok = self:AddPoint(result.HitPos, result.HitNormal, result.HitSky or result.HitNoDraw)
+
+	-- debugoverlay.Line(tr.StartPos, tr.HitPos, 1, ok and green or red, true)
 
 	pointcloud.Performance:AddSample("Sampler", SysTime() - time)
 
-	return ok, tr.HitPos + tr.HitNormal, tr
+	return ok, result.HitPos + result.HitNormal, result
 end
 
 local length = Vector(1, 1, 1):Length()
