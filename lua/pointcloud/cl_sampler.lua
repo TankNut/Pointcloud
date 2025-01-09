@@ -41,6 +41,8 @@ end
 pointcloud.Sampler.Queue = pointcloud.Sampler.Queue or queue()
 pointcloud.Sampler.Lookup = pointcloud.Sampler.Lookup or {}
 
+local down = Angle(90, 0, 0)
+
 function pointcloud.Sampler:Run()
 	local start = SysTime()
 	local lp = LocalPlayer()
@@ -91,16 +93,17 @@ function pointcloud.Sampler:Run()
 
 				if self.y == max.y then
 					finished = true
+					break
 				end
 			end
 
 			local vec = pointcloud.Data:FromData(Vector(self.x, self.y, 0))
 
-			-- vec.x = vec.x + math.Rand(-res * 0.5, res * 0.5)
-			-- vec.y = vec.y + math.Rand(-res * 0.5, res * 0.5)
+			vec.x = vec.x + math.Rand(-res * 0.5, res * 0.5)
+			vec.y = vec.y + math.Rand(-res * 0.5, res * 0.5)
 			vec.z = self.z
 
-			self:Trace(vec, Angle(90, 0, 0))
+			self:Trace(vec, down)
 		end
 
 		if finished then
