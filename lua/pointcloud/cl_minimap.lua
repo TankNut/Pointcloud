@@ -149,7 +149,7 @@ function pointcloud.Minimap:Draw()
 			render.SetStencilEnable(false)
 		cam.End2D()
 
-		if self.DoExport then
+		if self.DoExport and not gui.IsGameUIVisible() then
 			file.Write("pointcloud_export.png", render.Capture({
 				format = "png",
 				x = 0,
