@@ -123,11 +123,8 @@ function pointcloud.BSP:Load()
 	local reader = setmetatable({}, meta):Init()
 
 	for _, v in ipairs(reader.Leafs) do
-		if v.Contents != 1 then
-			self.Leafs[#self.Leafs + 1] = {
-				Mins = v.Mins,
-				Maxs = v.Maxs
-			}
+		if bit.band(v.Contents, CONTENTS_SOLID) != CONTENTS_SOLID then
+			self.Leafs[#self.Leafs + 1] = v
 		end
 	end
 
